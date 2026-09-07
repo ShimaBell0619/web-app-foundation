@@ -8,6 +8,7 @@ const captureTemplatePath = 'templates/github-pages/capture-pr-preview.mjs';
 
 const candidate = parseYaml(readFileSync(candidatePath, 'utf8'));
 const publisher = parseYaml(readFileSync(publisherPath, 'utf8'));
+const captureTemplate = readFileSync(captureTemplatePath, 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,6 +79,10 @@ function validateCandidate(workflow) {
     }
   }
 
+  const checkout = findStep(workflow, 'build', 'Checkout source');
+  assert(checkout.with?.ref === '${{ github.sha }}', 'candidate must checkout the exact workflow-run SHA');
+  assert(checkout.with?.['persist-credentials'] === false, 'candidate checkout must not persist credentials');
+
   const install = findStep(workflow, 'build', 'Install dependencies');
   assert(String(install.run).trim() === 'npm ci', 'candidate must install with npm ci');
 
@@ -96,9 +101,12 @@ function validateCandidate(workflow) {
     capture.if === "github.event_name == 'pull_request' && inputs.enable_review_images",
     'capture must run only for enabled PR review images',
   );
+  assert(capture.env?.PAGES_BASE_PATH === '${{ steps.target.outputs.base }}', 'capture must receive PAGES_BASE_PATH');
   assert(capture.env?.PAGES_REVIEW_DIR === '${{ runner.temp }}/pages-review', 'capture must write to runner.temp');
 
-  const assemble = String(findStep(workflow, 'build', 'Assemble candidate artifact').run ?? '');
+  const assembleStep = findStep(workflow, 'build', 'Assemble candidate artifact');
+  assert(assembleStep.env?.SOURCE_SHA === '${{ github.sha }}', 'candidate metadata must bind to the checked-out workflow SHA');
+  const assemble = String(assembleStep.run ?? '');
   for (const marker of [
     'site/index.html',
     'mobile.png',
@@ -264,6 +272,9 @@ validatePublisher(publisher);
 expectFailure('candidate write permission regression', (candidateCopy) => {
   candidateCopy.jobs.build.permissions = { contents: 'write' };
 });
+expectFailure('candidate source SHA regression', (candidateCopy) => {
+  findStep(candidateCopy, 'build', 'Checkout source').with.ref = '${{ github.event.pull_request.head.sha }}';
+});
 expectFailure('mutable candidate action regression', (candidateCopy) => {
   findStep(candidateCopy, 'build', 'Upload Pages candidate').uses = 'actions/upload-artifact@v4';
 });
@@ -286,5 +297,8 @@ assert(
   syntax.status === 0,
   `capture template must parse as JavaScript\nstdout:\n${syntax.stdout}\nstderr:\n${syntax.stderr}`,
 );
+for (const marker of ['PAGES_BASE_PATH', "'--base', basePath", 'reviewUrl']) {
+  assert(captureTemplate.includes(marker), `capture template missing deployed-base marker: ${marker}`);
+}
 
 console.log('Reusable Web Pages candidate/publisher contract tests passed.');
