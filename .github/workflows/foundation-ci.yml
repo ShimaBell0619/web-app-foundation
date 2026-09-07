@@ -38,6 +38,9 @@ jobs:
       - name: Run reusable CI contract tests
         run: npm run foundation:test:web-ci
 
+      - name: Run reusable Pages contract tests
+        run: npm run foundation:test:web-pages
+
       - name: Exercise release cycle
         run: npm run foundation:test:release
 
@@ -52,3 +55,14 @@ jobs:
     with:
       working_directory: fixtures/consumer
       cache_dependency_path: fixtures/consumer/package-lock.json
+
+  pages-candidate-smoke:
+    name: Pages candidate smoke
+    needs: validate
+    uses: ./.github/workflows/web-pages-candidate.yml
+    with:
+      working_directory: fixtures/pages-consumer
+      cache_dependency_path: fixtures/pages-consumer/package-lock.json
+      build_command: npm run build:pages
+      output_directory: dist
+      enable_review_images: false

@@ -11,17 +11,25 @@ const requiredFiles = [
   'package-lock.json',
   '.changeset/config.json',
   '.github/workflows/web-ci.yml',
+  '.github/workflows/web-pages-candidate.yml',
+  '.github/workflows/web-pages-publish.yml',
   '.github/workflows/foundation-ci.yml',
   '.github/ISSUE_TEMPLATE/work-item.yml',
   '.github/pull_request_template.md',
   'docs/adoption.md',
   'docs/ci-performance.md',
+  'docs/pages.md',
   'docs/versioning.md',
   'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs',
   'scripts/validate-release-state.mjs',
   'scripts/test-web-ci-contract.mjs',
+  'scripts/test-web-pages-contract.mjs',
   'scripts/test-release-cycle.mjs',
+  'templates/github-pages/capture-pr-preview.mjs',
+  'fixtures/pages-consumer/package.json',
+  'fixtures/pages-consumer/package-lock.json',
+  'fixtures/pages-consumer/scripts/build.mjs',
   'fixtures/consumer/package.json',
   'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs',
@@ -149,7 +157,7 @@ for (const section of sections) {
   previous = index;
 }
 
-function validatePermissions(path, permissions, scope, { required = false } = {}) {
+function validatePermissions(path, permissions, scope, { required = false, allowedWrites = [] } = {}) {
   if (permissions === undefined || permissions === null) {
     if (required) fail(`${path} ${scope} permissions must be declared explicitly`);
     return;
@@ -158,11 +166,14 @@ function validatePermissions(path, permissions, scope, { required = false } = {}
     fail(`${path} ${scope} permissions must be an explicit mapping, not ${String(permissions)}`);
     return;
   }
+  const allowedWriteSet = new Set(allowedWrites);
   for (const [name, level] of Object.entries(permissions)) {
     if (!['read', 'write', 'none'].includes(level)) {
       fail(`${path} ${scope} permission ${name} has unsupported level: ${String(level)}`);
     }
-    if (level === 'write') fail(`${path} ${scope} permission ${name} must not grant write access`);
+    if (level === 'write' && !allowedWriteSet.has(name)) {
+      fail(`${path} ${scope} permission ${name} must not grant write access`);
+    }
   }
 }
 
@@ -295,6 +306,7 @@ function validateFoundationCi(workflow, path) {
   requireRunStep(workflow, path, 'validate', 'Validate Foundation contracts', 'npm run foundation:validate');
   requireRunStep(workflow, path, 'validate', 'Run validator regression tests', 'npm run foundation:test');
   requireRunStep(workflow, path, 'validate', 'Run reusable CI contract tests', 'npm run foundation:test:web-ci');
+  requireRunStep(workflow, path, 'validate', 'Run reusable Pages contract tests', 'npm run foundation:test:web-pages');
   requireRunStep(workflow, path, 'validate', 'Exercise release cycle', 'npm run foundation:test:release');
   requireRunStep(workflow, path, 'validate', 'Validate current release metadata', 'npm run foundation:release-validate');
   requireRunStep(workflow, path, 'validate', 'Verify locked Changesets CLI', 'npm run version:tooling');
@@ -302,6 +314,11 @@ function validateFoundationCi(workflow, path) {
   const consumer = workflow.jobs?.['consumer-smoke'];
   if (!consumer || consumer.uses !== './.github/workflows/web-ci.yml') {
     fail(`${path} must execute the local reusable web-ci.yml through consumer-smoke`);
+  }
+
+  const pagesCandidate = workflow.jobs?.['pages-candidate-smoke'];
+  if (!pagesCandidate || pagesCandidate.uses !== './.github/workflows/web-pages-candidate.yml') {
+    fail(`${path} must execute the local reusable web-pages-candidate.yml through pages-candidate-smoke`);
   }
 }
 
@@ -336,7 +353,10 @@ for (const path of workflowPaths) {
       fail(`${path} job ${jobName} must be a mapping`);
       continue;
     }
-    validatePermissions(path, job.permissions, `job ${jobName}`);
+    const allowedWrites = path === '.github/workflows/web-pages-publish.yml'
+      ? ['contents', 'issues', 'pull-requests', 'pages', 'id-token']
+      : [];
+    validatePermissions(path, job.permissions, `job ${jobName}`, { allowedWrites });
     if (job.uses !== undefined) validateUses(path, job.uses, `job ${jobName}`);
 
     if (job['continue-on-error'] !== undefined && job['continue-on-error'] !== false) {
@@ -379,6 +399,7 @@ for (const script of [
   'tag-version',
   'foundation:release-validate',
   'foundation:test:web-ci',
+  'foundation:test:web-pages',
   'foundation:test:release',
 ]) {
   if (!pkg.scripts?.[script] || pkg.scripts[script].includes('npx')) {
