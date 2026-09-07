@@ -2,7 +2,7 @@
 
 ## Default model
 
-Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for Web App Foundation and, by default, for applications derived from it. `package.json` is the Foundation version source; README, `AGENTS.md`, and the root lockfile version must agree with it and Foundation CI verifies that consistency.
+Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for Web App Foundation and, by default, for applications derived from it. `package.json` is the Foundation version source; README, `AGENTS.md`, the root lockfile, and the current released `CHANGELOG.md` entry must agree with it.
 
 Version numbers communicate product/repository compatibility. They are not substitutes for deployment identifiers, commit SHAs, database migration versions, or environment names.
 
@@ -35,22 +35,45 @@ npm run version-packages
 npm run tag-version
 ```
 
-Do not replace these with ad-hoc `npx` resolution during a release.
+`npm run version:status` is a **local diagnostic**, not an unconditional CI quality gate. A release/version PR has already consumed the pending Changesets, and a Changeset-exempt change is intentionally allowed to have none. CI therefore verifies that the locked CLI is installed and executable without requiring a pending Changeset on every PR.
+
+Do not replace release tooling with ad-hoc `npx` resolution.
+
+## Normal change PR versus release PR
+
+A normal change PR and a release PR have different contracts:
+
+### Normal change PR
+
+- Add a Changeset when the change is consumer-visible or release-relevant.
+- Use the PR template to state explicitly when a Changeset is not required.
+- Quality CI validates the Foundation, but does not infer release intent solely from “some file changed in this root package”.
+- `npm run version:status` may be used by a developer/agent as an additional diagnostic when appropriate.
+
+### Release/version PR
+
+- Run `npm run version-packages`.
+- Changesets updates `package.json` and `CHANGELOG.md` and consumes the pending Changeset files.
+- The committed sync script then updates the Foundation version mirrors in `package-lock.json`, `README.md`, and `AGENTS.md`.
+- Do **not** require a new Changeset merely because the release PR has no pending Changesets.
+- Run `npm run foundation:release-validate` to verify package/lock/README/AGENTS/CHANGELOG consistency.
+
+This separation prevents the release mechanism from rejecting its own version PR.
 
 ## Release sequence
 
 A normal Foundation release is:
 
 1. merge approved Issue-driven PRs with required Changesets,
-2. start from a clean checkout and run `npm ci`, Foundation validation, and validator regression tests,
-3. run the Changesets version step,
-4. review the resulting package version, lockfile, README/AGENTS version fields, and changelog,
-5. update any version mirrors required by the validator,
-6. rerun Foundation validation from the final release commit,
+2. start from a clean checkout and run `npm ci`, Foundation validation, validator regression tests, and `npm run version:tooling`,
+3. create a release/version branch or PR and run `npm run version-packages`,
+4. review the generated package version and changelog plus the synchronized lockfile/README/AGENTS mirrors,
+5. run `npm ci`, `npm run foundation:validate`, `npm run foundation:test`, and `npm run foundation:release-validate` on the final release PR state,
+6. merge only after the release PR quality gates pass,
 7. create immutable `vX.Y.Z` release/tag evidence from that validated commit,
 8. downstream apps adopt the new Foundation deliberately.
 
-Do not mutate an existing released tag to point at different code. The release procedure itself must be exercised before the next Foundation release is treated as proven.
+Do not mutate an existing released tag to point at different code. The complete release procedure should be exercised before the next Foundation release is treated as proven.
 
 ## Downstream provenance
 

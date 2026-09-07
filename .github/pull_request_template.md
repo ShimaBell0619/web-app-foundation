@@ -42,6 +42,13 @@ Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR 
 
 - [ ] Not required for this risk level
 - [ ] Required and completed for auth/privilege, destructive migration, release/publish, privileged workflow, or reusable Foundation workflow changes
+- [ ] Required but unavailable; document the reason, alternative validation, and residual risk below
+
+If required review could not be completed:
+
+- Reason unavailable:
+- Alternative validation performed:
+- Residual risk / merge decision owner:
 
 ## Security / runtime-network impact
 
