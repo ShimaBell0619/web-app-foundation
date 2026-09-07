@@ -20,6 +20,8 @@ const requiredFiles = [
   'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs',
   'scripts/validate-release-state.mjs',
+  'scripts/test-web-ci-contract.mjs',
+  'scripts/test-release-cycle.mjs',
   'fixtures/consumer/package.json',
   'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs',
@@ -195,7 +197,7 @@ function requireRunStep(workflow, path, jobName, stepName, command, expectedIf =
   if (String(step.run ?? '').trim() !== command) {
     fail(`${path} step "${stepName}" must run exactly: ${command}`);
   }
-  if (step['continue-on-error'] === true || String(step['continue-on-error'] ?? '').trim() === 'true') {
+  if (step['continue-on-error'] !== undefined && step['continue-on-error'] !== false) {
     fail(`${path} step "${stepName}" must not continue on error`);
   }
   if (expectedIf === undefined) {
@@ -232,7 +234,7 @@ function validateReusableWebCi(workflow, path) {
     fail(`${path} must define verify job`);
     return;
   }
-  if (job['continue-on-error'] === true || String(job['continue-on-error'] ?? '').trim() === 'true') {
+  if (job['continue-on-error'] !== undefined && job['continue-on-error'] !== false) {
     fail(`${path} verify job must not continue on error`);
   }
 
@@ -292,6 +294,8 @@ function validateFoundationCi(workflow, path) {
   requireRunStep(workflow, path, 'validate', 'Reproducible install', 'npm ci');
   requireRunStep(workflow, path, 'validate', 'Validate Foundation contracts', 'npm run foundation:validate');
   requireRunStep(workflow, path, 'validate', 'Run validator regression tests', 'npm run foundation:test');
+  requireRunStep(workflow, path, 'validate', 'Run reusable CI contract tests', 'npm run foundation:test:web-ci');
+  requireRunStep(workflow, path, 'validate', 'Exercise release cycle', 'npm run foundation:test:release');
   requireRunStep(workflow, path, 'validate', 'Validate current release metadata', 'npm run foundation:release-validate');
   requireRunStep(workflow, path, 'validate', 'Verify locked Changesets CLI', 'npm run version:tooling');
 
@@ -335,7 +339,7 @@ for (const path of workflowPaths) {
     validatePermissions(path, job.permissions, `job ${jobName}`);
     if (job.uses !== undefined) validateUses(path, job.uses, `job ${jobName}`);
 
-    if (job['continue-on-error'] === true || String(job['continue-on-error'] ?? '').trim() === 'true') {
+    if (job['continue-on-error'] !== undefined && job['continue-on-error'] !== false) {
       fail(`${path} job ${jobName} must not continue on error`);
     }
 
@@ -374,6 +378,8 @@ for (const script of [
   'version:tooling',
   'tag-version',
   'foundation:release-validate',
+  'foundation:test:web-ci',
+  'foundation:test:release',
 ]) {
   if (!pkg.scripts?.[script] || pkg.scripts[script].includes('npx')) {
     fail(`${script} must use lockfile-installed tooling and committed scripts`);

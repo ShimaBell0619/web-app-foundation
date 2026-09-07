@@ -9,6 +9,8 @@
   "scripts": {
     "foundation:validate": "node scripts/validate-foundation.mjs",
     "foundation:test": "node scripts/test-foundation-validator.mjs",
+    "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
+    "foundation:test:release": "node scripts/test-release-cycle.mjs",
     "foundation:release-validate": "node scripts/validate-release-state.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version && node scripts/sync-foundation-version.mjs",

@@ -15,6 +15,7 @@ const files = [
   'docs/adoption.md', 'docs/ci-performance.md', 'docs/versioning.md',
   'scripts/validate-foundation.mjs', 'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs', 'scripts/validate-release-state.mjs',
+  'scripts/test-web-ci-contract.mjs', 'scripts/test-release-cycle.mjs',
   'fixtures/consumer/package.json', 'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs', 'fixtures/install-proof/package.json',
   'fixtures/install-proof/index.cjs',
