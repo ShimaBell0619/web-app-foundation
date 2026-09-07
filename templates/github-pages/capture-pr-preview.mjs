@@ -4,16 +4,21 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const reviewDir = path.resolve(process.env.PAGES_REVIEW_DIR ?? '.pages-review');
+const basePath = process.env.PAGES_BASE_PATH ?? '/';
+if (!basePath.startsWith('/') || !basePath.endsWith('/')) {
+  throw new Error(`PAGES_BASE_PATH must start and end with '/': ${basePath}`);
+}
+
 const host = '127.0.0.1';
 const port = 4174;
-const reviewUrl = `http://${host}:${port}/`;
+const reviewUrl = `http://${host}:${port}${basePath}`;
 
 await mkdir(reviewDir, { recursive: true });
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const server = spawn(
   npmCommand,
-  ['run', 'dev', '--', '--host', host, '--port', String(port), '--strictPort'],
+  ['run', 'dev', '--', '--host', host, '--port', String(port), '--strictPort', '--base', basePath],
   {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, BROWSER: 'none' },
