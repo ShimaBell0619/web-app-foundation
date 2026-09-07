@@ -3,15 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "description": "AI-first shared foundation for web application development.",
-  "packageManager": "npm@11.19.0",
   "engines": {
     "node": "^24.20.0 || >=26.0.0"
   },
   "scripts": {
     "foundation:validate": "node scripts/validate-foundation.mjs",
-    "changeset": "npx --yes @changesets/cli@3.0.2",
-    "version-packages": "npx --yes @changesets/cli@3.0.2 version",
-    "version:status": "npx --yes @changesets/cli@3.0.2 status",
-    "tag-version": "npx --yes @changesets/cli@3.0.2 tag"
+    "foundation:test": "node scripts/test-foundation-validator.mjs",
+    "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
+    "foundation:test:release": "node scripts/test-release-cycle.mjs",
+    "foundation:release-validate": "node scripts/validate-release-state.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version && node scripts/sync-foundation-version.mjs",
+    "version:status": "changeset status",
+    "version:tooling": "changeset --version",
+    "tag-version": "changeset tag"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.2",
+    "yaml": "2.9.0"
   }
 }

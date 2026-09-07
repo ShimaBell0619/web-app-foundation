@@ -1,0 +1,5 @@
+{
+  "name": "@foundation/ci-install-proof",
+  "version": "1.0.0",
+  "main": "index.cjs"
+}

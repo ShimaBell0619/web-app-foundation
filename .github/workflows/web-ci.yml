@@ -9,18 +9,56 @@ on:
         type: string
         default: .node-version
       cache_dependency_path:
-        description: npm lockfile used for the setup-node cache key.
+        description: npm lockfile used for the setup-node cache key, relative to repository root.
         required: false
         type: string
         default: package-lock.json
+      working_directory:
+        description: npm project directory relative to repository root.
+        required: false
+        type: string
+        default: .
+      run_check:
+        description: Run the required check script. Disabling requires check_opt_out_reason.
+        required: false
+        type: boolean
+        default: true
+      check_opt_out_reason:
+        description: Non-empty reason when run_check is false.
+        required: false
+        type: string
+        default: ''
+      run_typecheck:
+        description: Run the required typecheck script. Disabling requires typecheck_opt_out_reason.
+        required: false
+        type: boolean
+        default: true
+      typecheck_opt_out_reason:
+        description: Non-empty reason when run_typecheck is false.
+        required: false
+        type: string
+        default: ''
+      run_test:
+        description: Run the required test script. Disabling requires test_opt_out_reason.
+        required: false
+        type: boolean
+        default: true
+      test_opt_out_reason:
+        description: Non-empty reason when run_test is false.
+        required: false
+        type: string
+        default: ''
       run_e2e:
-        description: Run the caller's test:e2e script after the production build.
+        description: Run the caller's self-contained one-shot test:e2e script after build.
         required: false
         type: boolean
         default: false
 
 permissions:
   contents: read
+
+env:
+  CI: 'true'
 
 jobs:
   verify:
@@ -40,21 +78,72 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ inputs.cache_dependency_path }}
 
+      - name: Validate npm script contract
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          RUN_CHECK: ${{ inputs.run_check }}
+          CHECK_OPT_OUT_REASON: ${{ inputs.check_opt_out_reason }}
+          RUN_TYPECHECK: ${{ inputs.run_typecheck }}
+          TYPECHECK_OPT_OUT_REASON: ${{ inputs.typecheck_opt_out_reason }}
+          RUN_TEST: ${{ inputs.run_test }}
+          TEST_OPT_OUT_REASON: ${{ inputs.test_opt_out_reason }}
+          RUN_E2E: ${{ inputs.run_e2e }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          const scripts = pkg.scripts ?? {};
+
+          function requireScript(name) {
+            if (!scripts[name] || !String(scripts[name]).trim()) {
+              throw new Error(`required npm script is missing or empty: ${name}`);
+            }
+          }
+
+          function validateGate(enabledEnv, reasonEnv, scriptName) {
+            const enabled = process.env[enabledEnv] === 'true';
+            if (enabled) {
+              requireScript(scriptName);
+              return;
+            }
+            if (!String(process.env[reasonEnv] ?? '').trim()) {
+              throw new Error(`${scriptName} may be skipped only with an explicit opt-out reason`);
+            }
+            console.log(`${scriptName} explicitly skipped: ${process.env[reasonEnv]}`);
+          }
+
+          requireScript('build');
+          validateGate('RUN_CHECK', 'CHECK_OPT_OUT_REASON', 'check');
+          validateGate('RUN_TYPECHECK', 'TYPECHECK_OPT_OUT_REASON', 'typecheck');
+          validateGate('RUN_TEST', 'TEST_OPT_OUT_REASON', 'test');
+          if (process.env.RUN_E2E === 'true') requireScript('test:e2e');
+          NODE
+
       - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
         run: npm ci
 
       - name: Static checks
-        run: npm run check --if-present
+        if: ${{ inputs.run_check }}
+        working-directory: ${{ inputs.working_directory }}
+        run: npm run check
 
       - name: Typecheck
-        run: npm run typecheck --if-present
+        if: ${{ inputs.run_typecheck }}
+        working-directory: ${{ inputs.working_directory }}
+        run: npm run typecheck
 
       - name: Unit and component tests
-        run: npm run test --if-present
+        if: ${{ inputs.run_test }}
+        working-directory: ${{ inputs.working_directory }}
+        run: npm run test
 
       - name: Production build
+        working-directory: ${{ inputs.working_directory }}
         run: npm run build
 
       - name: End-to-end tests
         if: ${{ inputs.run_e2e }}
+        working-directory: ${{ inputs.working_directory }}
         run: npm run test:e2e

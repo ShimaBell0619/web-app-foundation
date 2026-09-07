@@ -31,3 +31,24 @@ jobs:
 
       - name: Validate Foundation contracts
         run: npm run foundation:validate
+
+      - name: Run validator regression tests
+        run: npm run foundation:test
+
+      - name: Run reusable CI contract tests
+        run: npm run foundation:test:web-ci
+
+      - name: Exercise release cycle
+        run: npm run foundation:test:release
+
+      - name: Validate current release metadata
+        run: npm run foundation:release-validate
+
+      - name: Verify locked Changesets CLI
+        run: npm run version:tooling
+
+  consumer-smoke:
+    uses: ./.github/workflows/web-ci.yml
+    with:
+      working_directory: fixtures/consumer
+      cache_dependency_path: fixtures/consumer/package-lock.json

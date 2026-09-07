@@ -23,6 +23,8 @@ This file is the shared design baseline for web applications derived from this F
 
 `DESIGN.md` is for **UI/UX and design-system decisions**. Product behavior belongs in `PRODUCT.md`; engineering workflow belongs in `AGENTS.md`; substantial technical architecture belongs in `docs/ARCHITECTURE.md`.
 
+The Google DESIGN.md alpha structure used here was reviewed against `google-labs-code/design.md` commit `9bf8eae67128b6cc55ad9bf86665767deb4c11cd` (release 0.4.0). When updating the schema, review the upstream specification deliberately rather than assuming `main` is unchanged.
+
 Design for the user's task first. Prefer clear hierarchy, predictable interaction, accessible controls, and restrained visual complexity over decorative novelty.
 
 ## Colors
@@ -69,7 +71,7 @@ Design for the user's task first. Prefer clear hierarchy, predictable interactio
 - Reuse proven component primitives when they improve accessibility and consistency.
 - Create app-specific reusable components only when a real pattern repeats or expresses a durable product interaction rule.
 - Preserve keyboard navigation, focus visibility, labels/names, error association, and appropriate target sizes.
-- Model loading, empty, error, disabled, selected, and success states deliberately when they are relevant to the component.
+- Model loading, empty, error, disabled, selected, and success states deliberately when relevant.
 
 ## Do's and Don'ts
 
@@ -91,4 +93,4 @@ Design for the user's task first. Prefer clear hierarchy, predictable interactio
 - Do not treat a single desktop screenshot as responsive validation.
 - Do not make an external design file the only source of truth required for routine AI implementation.
 
-Google's DESIGN.md format is currently alpha. Preserve valid machine-readable front matter, prefer the published schema over invented fields, and keep unsupported but important design rationale in Markdown prose until the specification can represent it directly.
+Google's DESIGN.md format is currently alpha. Preserve valid machine-readable front matter, prefer the reviewed published schema over invented fields, and keep unsupported but important design rationale in Markdown prose until the specification can represent it directly.
