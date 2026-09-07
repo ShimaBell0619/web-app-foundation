@@ -72,7 +72,8 @@ function mutateWorkflow(dir, file, mutator, label = file) {
 }
 
 function replaceExactly(text, pattern, replacement, label) {
-  const matches = [...text.matchAll(pattern)];
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  const matches = text.match(new RegExp(pattern.source, flags)) ?? [];
   if (matches.length !== 1) throw new Error(`${label}: expected exactly one replacement target, found ${matches.length}`);
   return text.replace(pattern, replacement);
 }
