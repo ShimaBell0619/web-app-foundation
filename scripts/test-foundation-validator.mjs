@@ -30,6 +30,18 @@ function mutate(dir, file, transform) {
   writeFileSync(path, transform(readFileSync(path, 'utf8')));
 }
 
+function setFoundationVersion(dir, version) {
+  for (const file of ['package.json', 'package-lock.json']) {
+    const path = join(dir, file);
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.version = version;
+    if (file === 'package-lock.json') json.packages[''].version = version;
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+  }
+  mutate(dir, 'README.md', (text) => text.replace(/Current Foundation version: \*\*\d+\.\d+\.\d+ \(pre-1\.0\)\*\*/, `Current Foundation version: **${version} (pre-1.0)**`));
+  mutate(dir, 'AGENTS.md', (text) => text.replace(/Foundation-Version: \d+\.\d+\.\d+/, `Foundation-Version: ${version}`));
+}
+
 function run(dir, shouldPass, label) {
   const result = spawnSync(process.execPath, ['scripts/validate-foundation.mjs'], { cwd: dir, encoding: 'utf8' });
   const passed = result.status === 0;
@@ -44,13 +56,10 @@ try {
     const dir = makeCopy(); dirs.push(dir);
     run(dir, true, 'current Foundation');
   }
-  {
+  for (const version of ['0.1.1', '0.2.0']) {
     const dir = makeCopy(); dirs.push(dir);
-    mutate(dir, 'package.json', (text) => text.replace('"version": "0.1.0"', '"version": "0.1.1"'));
-    mutate(dir, 'package-lock.json', (text) => text.replaceAll('"version": "0.1.0"', '"version": "0.1.1"'));
-    mutate(dir, 'README.md', (text) => text.replace('**0.1.0 (pre-1.0)**', '**0.1.1 (pre-1.0)**'));
-    mutate(dir, 'AGENTS.md', (text) => text.replace('Foundation-Version: 0.1.0', 'Foundation-Version: 0.1.1'));
-    run(dir, true, 'coherent future patch release');
+    setFoundationVersion(dir, version);
+    run(dir, true, `coherent future release ${version}`);
   }
   {
     const dir = makeCopy(); dirs.push(dir);
