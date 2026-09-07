@@ -36,6 +36,10 @@ jobs:
       - name: Run validator regression tests
         run: npm run foundation:test
 
+      - name: Expose PR base branch to Changesets
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git branch --force main origin/main
+
       - name: Verify locked Changesets status
         run: npm run version:status -- --output=/tmp/changeset-status.json
 
