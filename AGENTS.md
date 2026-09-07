@@ -1,6 +1,6 @@
 # Web App Foundation — Agent Instructions
 
-Foundation-Version: 0.1.0
+Foundation-Version: 0.2.0
 
 ## Scope
 
