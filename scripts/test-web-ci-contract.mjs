@@ -5,8 +5,17 @@ import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 
 const workflow = parseYaml(readFileSync('.github/workflows/web-ci.yml', 'utf8'));
-const contract = workflow.jobs?.verify?.steps?.find((step) => step?.name === 'Validate npm script contract');
+const verifySteps = workflow.jobs?.verify?.steps ?? [];
+const checkout = verifySteps.find((step) => step?.name === 'Checkout');
+const contract = verifySteps.find((step) => step?.name === 'Validate npm script contract');
 
+if (!checkout) throw new Error('could not locate reusable CI checkout step');
+if (checkout.with?.ref !== '${{ github.sha }}') {
+  throw new Error('reusable CI must checkout the exact workflow-run SHA');
+}
+if (checkout.with?.['persist-credentials'] !== false) {
+  throw new Error('reusable CI checkout must not persist credentials');
+}
 if (!contract?.run) throw new Error('could not locate reusable CI script-contract step');
 
 const match = String(contract.run).match(/node <<'NODE'\n([\s\S]*?)\nNODE\s*$/);
