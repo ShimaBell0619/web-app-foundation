@@ -2,26 +2,27 @@ name: Temporary lockfile bootstrap
 
 on:
   push:
-    branches: [fix/astra-review-hardening]
+    branches:
+      - fix/astra-review-hardening
 
 permissions:
   contents: write
 
 jobs:
   generate:
-    if: github.actor == 'ShimaBell0619' && !contains(github.event.head_commit.message, 'chore: generate locked release tooling')
+    if: github.actor == 'ShimaBell0619'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: .node-version
       - name: Generate package lock
         run: npm install --package-lock-only --ignore-scripts
-      - name: Commit generated lockfile
+      - name: Commit generated lockfile when changed
         shell: bash
         run: |
           if git diff --quiet -- package-lock.json; then
