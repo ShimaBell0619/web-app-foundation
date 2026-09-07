@@ -2,11 +2,9 @@
 
 ## Default cache
 
-The reusable web CI uses `actions/setup-node` with npm caching.
+The reusable web CI uses `actions/setup-node` with npm caching. This caches npm's package-manager download cache, **not `node_modules`**. `npm ci` still reconstructs dependencies from the committed lockfile.
 
-This caches npm's package-manager download cache, **not `node_modules`**. `npm ci` still reconstructs dependencies from the committed lockfile, preserving a simple reproducibility boundary while avoiding repeated package downloads.
-
-Use `cache-dependency-path` to point at the authoritative `package-lock.json`.
+Use `cache-dependency-path` to point at the authoritative lockfile. The reusable workflow is intended for unprivileged quality validation; do not assume the same cache policy is appropriate for privileged publishing.
 
 ## What not to cache by default
 
@@ -22,29 +20,20 @@ Each adds invalidation rules, storage use, security considerations, and debuggin
 
 ## When to add another cache
 
-Add an additional cache only after measuring at least:
+Add an additional cache only after measuring uncached duration, hit rate, restore/save time, typical size, invalidation correctness, and trust-boundary/cache-poisoning implications. A cache that saves seconds but adds opaque stale-state failures is not an optimization.
 
-1. the uncached step duration,
-2. the expected hit rate,
-3. the cache restore/save time,
-4. typical cache size,
-5. invalidation correctness,
-6. trust boundary/cache-poisoning implications.
-
-A cache that saves seconds but adds opaque stale-state failures is not an optimization.
+Never store secrets, credentials, production configuration, or privileged mutable state in a cache. Privileged publish/deploy jobs should default to no cache and opt in only after explicit threat-model review.
 
 ## Dependency install baseline
 
-For npm applications:
+For npm applications, `npm ci` is the CI installation contract. Keep `package-lock.json` committed and review lockfile changes. Foundation CI also exercises an actual consumer fixture so replacing dependency installation with a textual/no-op marker does not satisfy the contract.
 
-```bash
-npm ci
-```
+## Required quality gates
 
-is the CI installation contract. Keep `package-lock.json` committed and review lockfile changes.
+`check`, `typecheck`, and `test` run by default; `build` always runs. A gate is skipped only through an explicit workflow input with a non-empty reason. This makes script deletion/renaming a visible failure instead of a silent reduction in coverage.
 
 ## E2E
 
-Browser E2E is opt-in in the reusable baseline because downloading browsers and starting a runtime can dominate CI time. Enable it for flows where browser-runtime regression coverage is worth that cost.
+Browser E2E remains opt-in because browser/runtime setup can dominate CI time. When `run_e2e` is enabled, `test:e2e` must be a one-shot, self-contained command for its required browser/server lifecycle. For complex Playwright setup, visual infrastructure, environment credentials, or provider-specific services, prefer an app-owned E2E job.
 
-If browser setup later becomes a measured bottleneck, add a cache only with a documented invalidation key that includes the browser/test-runner version and runner platform.
+Add browser or framework caches only after measurement and with version/platform-aware keys plus an explicit trust-boundary review.

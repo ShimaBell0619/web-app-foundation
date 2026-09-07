@@ -25,44 +25,26 @@ Application repositories remain self-contained. Product and design templates are
 
 ## Default web baseline
 
-The current default for a new browser-first application is:
-
-- TypeScript
-- React
-- Vite
-- npm with a committed `package-lock.json`
-- current production-suitable Node.js LTS, pinned in `.node-version`
-- lint/format checks, type checking, unit tests, production build
-- targeted E2E/visual/accessibility tests where they provide material regression value
-
-These are defaults, not permanent restrictions. SSR, server components, API routes, backend services, databases, or alternative frameworks are introduced when product requirements justify them.
+The current default for a new browser-first application is TypeScript + React + Vite + npm with a committed lockfile and a production-suitable Node LTS pinned in `.node-version`. These are defaults, not permanent restrictions; SSR, server components, API routes, backend services, databases, or alternative frameworks are introduced when product requirements justify them.
 
 ## AI development lifecycle
 
-Feature work is Issue-driven. An Issue represents one independently understandable objective with acceptance criteria. A PR may close multiple tightly related Issues when that improves implementation efficiency without harming reviewability.
+Feature work is Issue-driven. An Issue represents one independently understandable objective with acceptance criteria. Related Issues may share a PR; an Issue may also span multiple PRs, using `Refs #N` until the final AC-completing PR uses `Closes #N`.
 
-Agents do not treat the first implementation pass as complete:
-
-1. read the applicable contracts and existing implementation,
-2. implement the smallest coherent solution,
-3. self-review the entire change as if reviewing another engineer's PR,
-4. correct real defects, regressions, unnecessary complexity, or hardening gaps,
-5. re-review the affected areas,
-6. run final validation,
-7. report implementation, review-driven corrections, validation, and remaining risks.
+Agents do not treat the first implementation pass as complete: read contracts -> implement -> self-review as another engineer -> correct/harden -> re-review -> final validation -> evidence-based completion report. Material auth/privilege, migration, release/publish, or reusable-workflow changes should receive independent review before merge when practical.
 
 ## CI boundary
 
-`.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It performs reproducible install, static checks when present, type checking when present, unit tests when present, production build, and optional E2E.
+`.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It requires `check`, `typecheck`, `test`, and production `build` by default. Check/typecheck/test can be skipped only through an explicit workflow opt-out with a non-empty reason; build remains mandatory. A small consumer fixture runs the reusable workflow in Foundation CI so GitHub validates the actual shared workflow, not only text markers.
 
-The Foundation standardizes **quality CI**, not a deployment provider. GitHub Pages, Azure Static Web Apps, Vercel, App Service, Container Apps, and other deployment targets remain application decisions.
+The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Deployment providers remain application decisions, but automated publish must use the same source SHA that passed required quality gates.
 
 ## Versioning
 
 - Semantic Versioning is the default.
-- Foundation stays in `0.x` until real consumers validate the contracts well enough to define and pass a deliberate 1.0 gate.
+- Foundation stays in `0.x` until real consumers validate a deliberate 1.0 gate.
 - Changesets record consumer-visible/release-relevant changes.
-- Docs-only, CI-only, test-only, and internal-only changes do not need a Changeset unless they alter a consumer-facing Foundation contract.
+- The Changesets CLI is an exact devDependency covered by `package-lock.json` and `npm ci`.
 - `CHANGELOG.md` records released Foundation changes.
 
-See `docs/adoption.md` for provenance/upgrade rules and `docs/versioning.md` for the complete pre-1.0 and stable SemVer policy.
+See `docs/adoption.md`, `docs/ci-performance.md`, and `docs/versioning.md` for the detailed contracts.

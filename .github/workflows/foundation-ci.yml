@@ -31,3 +31,15 @@ jobs:
 
       - name: Validate Foundation contracts
         run: npm run foundation:validate
+
+      - name: Run validator regression tests
+        run: npm run foundation:test
+
+      - name: Verify Changesets CLI is lockfile-installed
+        run: npm run version:status -- --output=/tmp/changeset-status.json
+
+  consumer-smoke:
+    uses: ./.github/workflows/web-ci.yml
+    with:
+      working_directory: fixtures/consumer
+      cache_dependency_path: fixtures/consumer/package-lock.json
