@@ -1,0 +1,60 @@
+name: Web CI (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      node_version_file:
+        description: Node version file committed by the caller.
+        required: false
+        type: string
+        default: .node-version
+      cache_dependency_path:
+        description: npm lockfile used for the setup-node cache key.
+        required: false
+        type: string
+        default: package-lock.json
+      run_e2e:
+        description: Run the caller's test:e2e script after the production build.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ${{ inputs.node_version_file }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.cache_dependency_path }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static checks
+        run: npm run check --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Unit and component tests
+        run: npm run test --if-present
+
+      - name: Production build
+        run: npm run build
+
+      - name: End-to-end tests
+        if: ${{ inputs.run_e2e }}
+        run: npm run test:e2e

@@ -1,0 +1,54 @@
+name: Work item
+description: Feature, bug fix, refactor, or Foundation change
+title: ""
+labels: []
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Change type
+      options:
+        - Feature
+        - Bug
+        - Refactor
+        - Documentation
+        - CI / tooling
+        - Foundation contract
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One independently understandable objective.
+      placeholder: What outcome should this Issue produce?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and constraints
+      description: Existing contracts, boundaries, dependencies, or non-goals relevant to the work.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable conditions that define completion.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation expectations
+      description: Tests, rendered UI checks, migration checks, security evidence, or other required validation.
+    validations:
+      required: false
