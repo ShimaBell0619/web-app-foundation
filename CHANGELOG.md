@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- 2ab1db3: Fix the trusted Pages caller permission union so cleanup calls can start reusable publisher workflows while the cleanup job still runs with its narrower least-privilege token.
+
 All notable consumer-facing changes to Web App Foundation are documented here.
 
 The project follows Semantic Versioning and remains pre-1.0 while its contracts are validated in real applications.
