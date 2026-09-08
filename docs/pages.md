@@ -113,7 +113,7 @@ The canonical app-owned caller is:
 
 Copy it during **Phase 0**, replace the Foundation SHA placeholder, and merge it to the default branch before expecting `workflow_run`-driven previews.
 
-The caller grants write permissions at the individual job because GitHub does not allow a called reusable workflow to elevate permissions above its caller. The reusable publisher then declares and validates the exact permissions and context it needs.
+The caller grants the permission union required by the reusable publisher before each call because GitHub validates the called workflow's jobs before runtime `if`/input selection and does not allow a called reusable workflow to elevate permissions above its caller. This means even the cleanup caller includes `actions: read` because the same reusable workflow contains the publish job that downloads a prior-run artifact. The called cleanup job immediately narrows its own token back to its exact cleanup permissions, so runtime least privilege is preserved.
 
 ### Why `workflow_run`
 

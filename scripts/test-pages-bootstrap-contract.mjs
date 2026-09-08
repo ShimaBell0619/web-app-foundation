@@ -13,6 +13,7 @@ function assert(condition, message) {
 }
 
 const callerTemplate = parseYaml(callerTemplateText);
+const publisherWorkflow = parseYaml(readFileSync('.github/workflows/web-pages-publish.yml', 'utf8'));
 assert(callerTemplate.on?.workflow_run, 'publisher caller template must use workflow_run');
 assert(callerTemplate.on?.pull_request_target, 'publisher caller template must retain metadata-only close cleanup');
 assert(!callerTemplate.on?.pull_request, 'publisher caller template must not use direct pull_request publishing');
@@ -29,6 +30,27 @@ for (const marker of [
   'cleanup-preview',
 ]) {
   assert(callerTemplateText.includes(marker), `publisher caller template missing marker: ${marker}`);
+}
+
+const permissionRank = { none: 0, read: 1, write: 2 };
+const requiredPublisherPermissions = {};
+for (const job of Object.values(publisherWorkflow.jobs ?? {})) {
+  for (const [permission, level] of Object.entries(job?.permissions ?? {})) {
+    const current = requiredPublisherPermissions[permission] ?? 'none';
+    if ((permissionRank[level] ?? -1) > (permissionRank[current] ?? -1)) {
+      requiredPublisherPermissions[permission] = level;
+    }
+  }
+}
+for (const [jobName, job] of Object.entries(callerTemplate.jobs ?? {})) {
+  if (!String(job?.uses ?? '').includes('web-pages-publish.yml')) continue;
+  for (const [permission, requiredLevel] of Object.entries(requiredPublisherPermissions)) {
+    const grantedLevel = job?.permissions?.[permission] ?? 'none';
+    assert(
+      (permissionRank[grantedLevel] ?? -1) >= (permissionRank[requiredLevel] ?? -1),
+      `publisher caller ${jobName} must grant ${permission}: ${requiredLevel} because GitHub validates the full reusable workflow before runtime job selection`,
+    );
+  }
 }
 
 for (const marker of [
