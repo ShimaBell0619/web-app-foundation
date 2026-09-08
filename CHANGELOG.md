@@ -4,6 +4,12 @@ All notable consumer-facing changes to Web App Foundation are documented here.
 
 The project follows Semantic Versioning and remains pre-1.0 while its contracts are validated in real applications.
 
+## 0.3.1 - 2026-09-08
+
+### Changed
+
+- Fixed the trusted Pages caller permission union so cleanup calls can start reusable publisher workflows while the cleanup job still runs with its narrower least-privilege token.
+
 ## 0.3.0 - 2026-09-08
 
 ### Added
