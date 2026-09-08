@@ -6,7 +6,7 @@ For a new application:
 
 1. Start from real product requirements rather than copying a full framework stack blindly.
 2. Copy `PRODUCT.base.md` to `PRODUCT.md` and replace template text with the approved product contract.
-3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale.
+3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale. For material UI work, use `docs/ui-review.md` to validate the rendered result against that product-specific direction.
 4. Copy/adapt the relevant `AGENTS.md` rules. Add app-specific constraints rather than depending on chat memory.
 5. Add specialist documents only when needed, commonly `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/RELEASE.md`, or `docs/COMPATIBILITY.md`.
 6. Use a committed Node version file and package-manager lockfile.
@@ -83,6 +83,12 @@ Example for a JavaScript-only app with no separate type checker:
 ## E2E contract
 
 `run_e2e: true` requires a `test:e2e` script. That script must terminate and own the runtime lifecycle it needs: browser availability/setup, application/server startup and readiness, test execution, and cleanup. If those responsibilities require provider-specific or privileged setup, prefer an app-owned E2E job and keep the shared workflow focused on unprivileged quality validation.
+
+## Rendered UI review
+
+For material user-facing changes, use `docs/ui-review.md` as the review method after the normal quality gate. It defines the product-specific design-direction check, render → critique → fix → re-render loop, 1440px / 390px / 320px baseline, overflow/focus/status review, and Japanese/CJK rendering notes.
+
+The guide is intentionally style-neutral: consumers keep their own visual direction and product-specific assertions in `DESIGN.md` and application tests.
 
 ## Optional GitHub Pages previews
 
