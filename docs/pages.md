@@ -4,10 +4,10 @@ This capability is optional. It is intended for browser-first applications that 
 
 The Foundation splits the workflow into two trust levels:
 
-1. `.github/workflows/web-pages-candidate.yml` runs application code with read-only repository permissions after the normal quality gate. It builds the exact source SHA and uploads a static candidate artifact. Optional Playwright screenshots are created here because this job is intentionally unprivileged.
-2. `.github/workflows/web-pages-publish.yml` runs only after the candidate workflow has completed successfully. It has the write permissions required for Pages, but it **does not checkout source, install dependencies, or execute application scripts**. It only validates and publishes the previously created artifact.
+1. `.github/workflows/web-pages-candidate.yml` runs application code with read-only repository permissions after the normal quality gate. It builds the same event SHA used by normal CI and uploads a static candidate artifact. For pull requests, GitHub normally uses the event merge SHA as `github.sha`; the candidate separately records the PR head SHA as the source revision used for freshness checks. Optional Playwright screenshots are created here because this job is intentionally unprivileged.
+2. `.github/workflows/web-pages-publish.yml` runs only after the candidate workflow has completed successfully. It has the write permissions required for Pages, but it **does not checkout source, install dependencies, or execute application scripts**. It validates workflow-run provenance, downloads the candidate from that exact run, verifies its manifest, checks that the PR/main revision has not advanced, and only then publishes.
 
-This separation follows the Foundation deployment rule: privileged publishing must not execute pull-request code. The publisher also validates the triggering workflow name, run ID, source SHA, repository, event, branch/PR number, and candidate manifest before publishing.
+This separation follows the Foundation deployment rule: privileged publishing must not execute pull-request code. The publisher validates the triggering workflow name, run ID, source revision SHA, repository, event, branch/PR number, current revision, and candidate manifest before publishing.
 
 ## Supported model
 
@@ -65,9 +65,20 @@ jobs:
 
 The default build command is suitable for the Vite baseline. A different static-site tool may override `build_command`, but it must honor `PAGES_BASE_PATH` so production and `/pr-N/` assets resolve correctly.
 
-The candidate job repeats only the install/build work required to create the deployable artifact. It does not rerun `check`, `typecheck`, unit tests, or the full E2E suite. The `needs: verify` dependency ensures the candidate is created only after the same source SHA passes the normal Foundation quality gate.
+The candidate job repeats only the install/build work required to create the deployable artifact. It does not rerun `check`, `typecheck`, unit tests, or the full E2E suite. The `needs: verify` dependency ensures the candidate is created only after the same event build SHA passes the normal Foundation quality gate.
 
 Fork pull requests still run the ordinary unprivileged CI, but the example skips Pages candidate generation because privileged preview publication is intentionally limited to same-repository PRs.
+
+### PR revision SHA versus event build SHA
+
+For a `pull_request` workflow, two SHAs matter:
+
+- **source revision SHA**: the PR head commit (`github.event.pull_request.head.sha`). GitHub exposes the same revision as `workflow_run.head_sha` to the trusted publisher.
+- **event build SHA**: `github.sha`, normally the generated pull-request merge ref. Both the normal Foundation CI and Pages candidate explicitly checkout this SHA, so the candidate is built from the same integration revision that was validated.
+
+The candidate manifest records both values as `sourceSha` and `buildSha`. The privileged publisher does not pretend that `workflow_run.head_sha` is the merge-ref SHA. Instead, it trusts the artifact provenance from the exact successful workflow run, validates `sourceSha` against that run's head revision, and checks the repository again before staging so an older successful run cannot overwrite a newer PR preview.
+
+For a `push` to `main`, `sourceSha` and `buildSha` are the same commit.
 
 ## 2. Add the trusted publisher caller
 
@@ -162,6 +173,8 @@ The caller grants write permissions at the individual job because GitHub does no
 
 The Pages publisher is privileged. `workflow_run` lets the trusted default-branch publisher react after CI has completed, while the reusable publisher downloads the candidate into `runner.temp` and never checks out or executes the candidate source.
 
+The publisher also rejects stale runs. For production it verifies that `main` still points to `workflow_run.head_sha`. For previews it verifies that the pull request is still open, still belongs to the same repository, and still has that head SHA. It repeats this check immediately before mutating persistent Pages content to narrow the race window.
+
 Do not change the publisher to checkout `workflow_run.head_sha` and rebuild there. That would put pull-request code in a write-enabled context and remove the trust separation.
 
 ### Why `pull_request_target` appears only for close cleanup
@@ -209,9 +222,9 @@ The comment contains:
 - interactive `/pr-N/` preview link,
 - 390px mobile screenshot inline,
 - 1440px desktop screenshot under `<details>`,
-- the source short SHA.
+- the source-revision short SHA.
 
-Image URLs include the full source SHA as a query string to avoid stale GitHub image-proxy caches.
+Image URLs include the full source revision SHA as a query string to avoid stale GitHub image-proxy caches.
 
 When the PR closes, the preview directory is removed and the same comment is changed to a closed message rather than creating another comment.
 
@@ -243,11 +256,14 @@ Before enabling the capability, verify:
 
 - [ ] CI caller and Pages publisher reference Foundation workflows by reviewed full commit SHA.
 - [ ] Pages candidate depends on the normal `verify` job.
+- [ ] Normal CI and Pages candidate checkout the same event build SHA (`github.sha`).
+- [ ] Candidate metadata keeps PR/push source revision and event build SHA distinct.
 - [ ] Fork PRs cannot enter privileged preview publication.
 - [ ] Privileged publisher never uses `actions/checkout`.
 - [ ] Privileged publisher never runs `npm ci`, build commands, test commands, or PR-provided scripts.
 - [ ] Cross-run artifact is downloaded to `runner.temp`, not the workspace.
-- [ ] Publisher validates workflow name, successful conclusion, run ID, source SHA, repository, event, branch/PR number, and candidate manifest.
+- [ ] Publisher validates workflow name, successful conclusion, run ID, source revision SHA, repository, event, branch/PR number, and candidate manifest.
+- [ ] Publisher rejects stale production/PR revisions and rechecks immediately before staging.
 - [ ] Publish concurrency is not cancel-in-progress.
 - [ ] Cleanup uses `pull_request_target` only for metadata-driven deletion and never executes PR code.
 - [ ] Pages Source is GitHub Actions.
