@@ -1,0 +1,43 @@
+name: Generate v0.3.1 release state
+
+on:
+  push:
+    branches: [release/v0.3.1]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: release/v0.3.1
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Generate release state
+        run: npm run version-packages
+      - name: Validate generated version
+        run: |
+          set -euo pipefail
+          node -e "const p=require('./package.json'); if(p.version!=='0.3.1') throw new Error('expected 0.3.1, got '+p.version)"
+          npm run foundation:release-validate
+      - name: Commit generated release state
+        run: |
+          set -euo pipefail
+          rm .github/workflows/release-v031-generate.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json README.md AGENTS.md CHANGELOG.md .changeset .github/workflows/release-v031-generate.yml
+          git diff --cached --check
+          git commit -m 'chore: release web-app-foundation v0.3.1'
+          git push origin HEAD:release/v0.3.1
