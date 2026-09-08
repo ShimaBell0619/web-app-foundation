@@ -1,0 +1,114 @@
+name: Finalize issue 22 fix
+
+on:
+  push:
+    branches: [fix/issue-22-publisher-permissions]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply final fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          template_path = Path('templates/github-pages/pages-publish.yml')
+          template = template_path.read_text()
+          anchor = '  cleanup-preview:'
+          start = template.index(anchor)
+          before = '\n    permissions:\n      contents: write'
+          pos = template.index(before, start)
+          template = template[:pos] + '\n    permissions:\n      actions: read\n      contents: write' + template[pos + len(before):]
+          template_path.write_text(template)
+
+          test_path = Path('scripts/test-pages-bootstrap-contract.mjs')
+          test = test_path.read_text()
+          old = "const callerTemplate = parseYaml(callerTemplateText);\n"
+          new = "const callerTemplate = parseYaml(callerTemplateText);\nconst publisherWorkflow = parseYaml(readFileSync('.github/workflows/web-pages-publish.yml', 'utf8'));\n"
+          if old not in test:
+              raise SystemExit('bootstrap test insertion anchor not found')
+          test = test.replace(old, new, 1)
+
+          marker = "for (const marker of [\n  'Phase 0',"
+          permission_test = r'''const permissionRank = { none: 0, read: 1, write: 2 };
+          const requiredPublisherPermissions = {};
+          for (const job of Object.values(publisherWorkflow.jobs ?? {})) {
+            for (const [permission, level] of Object.entries(job?.permissions ?? {})) {
+              const current = requiredPublisherPermissions[permission] ?? 'none';
+              if ((permissionRank[level] ?? -1) > (permissionRank[current] ?? -1)) {
+                requiredPublisherPermissions[permission] = level;
+              }
+            }
+          }
+          for (const [jobName, job] of Object.entries(callerTemplate.jobs ?? {})) {
+            if (!String(job?.uses ?? '').includes('web-pages-publish.yml')) continue;
+            for (const [permission, requiredLevel] of Object.entries(requiredPublisherPermissions)) {
+              const grantedLevel = job?.permissions?.[permission] ?? 'none';
+              assert(
+                (permissionRank[grantedLevel] ?? -1) >= (permissionRank[requiredLevel] ?? -1),
+                `publisher caller ${jobName} must grant ${permission}: ${requiredLevel} because GitHub validates the full reusable workflow before runtime job selection`,
+              );
+            }
+          }
+
+          '''
+          if marker not in test:
+              raise SystemExit('bootstrap permission-test anchor not found')
+          test = test.replace(marker, permission_test + marker, 1)
+          test_path.write_text(test)
+
+          docs_path = Path('docs/pages.md')
+          docs = docs_path.read_text()
+          old_docs = 'The caller grants write permissions at the individual job because GitHub does not allow a called reusable workflow to elevate permissions above its caller. The reusable publisher then declares and validates the exact permissions and context it needs.'
+          new_docs = 'The caller grants the permission union required by the reusable publisher before each call because GitHub validates the called workflow\'s jobs before runtime `if`/input selection and does not allow a called reusable workflow to elevate permissions above its caller. This means even the cleanup caller includes `actions: read` because the same reusable workflow contains the publish job that downloads a prior-run artifact. The called cleanup job immediately narrows its own token back to its exact cleanup permissions, so runtime least privilege is preserved.'
+          if old_docs not in docs:
+              raise SystemExit('Pages permissions paragraph not found')
+          docs_path.write_text(docs.replace(old_docs, new_docs, 1))
+
+          Path('.changeset/fuzzy-pages-permissions.md').write_text('''---\n"web-app-foundation": patch\n---\n\nFix the trusted Pages caller permission union so cleanup calls can start reusable publisher workflows while the cleanup job still runs with its narrower least-privilege token.\n''')
+
+          for path in [
+              '.github/workflows/permission-repro-called.yml',
+              '.github/workflows/permission-repro.yml',
+              '.github/workflows/publisher-repro.yml',
+              '.github/workflows/finalize-issue-22.yml',
+          ]:
+              Path(path).unlink(missing_ok=True)
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Pages contracts
+        run: npm run foundation:test:web-pages
+
+      - name: Validate Foundation
+        run: |
+          npm run foundation:validate
+          npm run foundation:test
+          npm run foundation:release-validate
+
+      - name: Commit clean fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add templates/github-pages/pages-publish.yml scripts/test-pages-bootstrap-contract.mjs docs/pages.md .changeset/fuzzy-pages-permissions.md
+          git add -u .github/workflows
+          git commit -m 'fix: align Pages caller permission union'
+          git push origin HEAD:fix/issue-22-publisher-permissions
