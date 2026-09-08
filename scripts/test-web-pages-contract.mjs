@@ -80,7 +80,7 @@ function validateCandidate(workflow) {
   }
 
   const checkout = findStep(workflow, 'build', 'Checkout source');
-  assert(checkout.with?.ref === '${{ github.sha }}', 'candidate must checkout the exact workflow-run SHA');
+  assert(checkout.with?.ref === '${{ github.sha }}', 'candidate must checkout the exact event build SHA');
   assert(checkout.with?.['persist-credentials'] === false, 'candidate checkout must not persist credentials');
 
   const install = findStep(workflow, 'build', 'Install dependencies');
@@ -105,7 +105,11 @@ function validateCandidate(workflow) {
   assert(capture.env?.PAGES_REVIEW_DIR === '${{ runner.temp }}/pages-review', 'capture must write to runner.temp');
 
   const assembleStep = findStep(workflow, 'build', 'Assemble candidate artifact');
-  assert(assembleStep.env?.SOURCE_SHA === '${{ github.sha }}', 'candidate metadata must bind to the checked-out workflow SHA');
+  assert(
+    assembleStep.env?.SOURCE_SHA === '${{ github.event.pull_request.head.sha || github.sha }}',
+    'candidate source revision must match workflow_run.head_sha semantics',
+  );
+  assert(assembleStep.env?.BUILD_SHA === '${{ github.sha }}', 'candidate build SHA must match the checked-out event SHA');
   const assemble = String(assembleStep.run ?? '');
   for (const marker of [
     'site_dir/index.html',
@@ -113,6 +117,7 @@ function validateCandidate(workflow) {
     'desktop.png',
     'metadata.json',
     'sourceSha',
+    'buildSha',
     'reviewImages',
   ]) {
     assert(assemble.includes(marker), `candidate assembly missing marker: ${marker}`);
@@ -178,7 +183,9 @@ function validatePublisher(workflow) {
   }
   assert(!allUses.some((ref) => ref.startsWith('actions/checkout@')), 'privileged publisher must never checkout source code');
 
-  const guard = String(findStep(workflow, 'publish', 'Validate trusted publish context').run ?? '');
+  const guardStep = findStep(workflow, 'publish', 'Validate trusted publish context');
+  assert(guardStep.env?.GH_TOKEN === '${{ github.token }}', 'publish trust guard must authenticate current-revision checks');
+  const guard = String(guardStep.run ?? '');
   for (const marker of [
     "EVENT_NAME\" != 'workflow_run'",
     'WORKFLOW_RUN_NAME',
@@ -189,6 +196,10 @@ function validatePublisher(workflow) {
     'WORKFLOW_RUN_EVENT',
     'WORKFLOW_RUN_BRANCH',
     'WORKFLOW_RUN_PR_NUMBER',
+    'gh api',
+    'current_sha',
+    'current_state',
+    'source workflow is stale',
   ]) {
     assert(guard.includes(marker), `publish trust guard missing marker: ${marker}`);
   }
@@ -204,14 +215,21 @@ function validatePublisher(workflow) {
     'candidate artifact must not contain symbolic links',
     'candidate metadata mismatch',
     'sourceSha',
+    'buildSha',
     'basePath',
     'reviewImages',
+    'production candidate buildSha must equal sourceSha',
   ]) {
     assert(manifest.includes(marker), `candidate manifest validation missing marker: ${marker}`);
   }
 
-  const stage = String(findStep(workflow, 'publish', 'Stage persistent Pages content').run ?? '');
+  const stageStep = findStep(workflow, 'publish', 'Stage persistent Pages content');
+  assert(stageStep.env?.SOURCE_SHA === '${{ inputs.source_sha }}', 'staging must receive the validated source revision');
+  const stage = String(stageStep.run ?? '');
   for (const marker of [
+    'gh api',
+    'refusing stale publish',
+    'refusing stale preview publish',
     "staging_branch='pages-content'",
     "! -name 'pr-*'",
     '.preview-root-placeholder',
@@ -272,8 +290,11 @@ validatePublisher(publisher);
 expectFailure('candidate write permission regression', (candidateCopy) => {
   candidateCopy.jobs.build.permissions = { contents: 'write' };
 });
-expectFailure('candidate source SHA regression', (candidateCopy) => {
+expectFailure('candidate build SHA checkout regression', (candidateCopy) => {
   findStep(candidateCopy, 'build', 'Checkout source').with.ref = '${{ github.event.pull_request.head.sha }}';
+});
+expectFailure('candidate revision metadata regression', (candidateCopy) => {
+  findStep(candidateCopy, 'build', 'Assemble candidate artifact').env.SOURCE_SHA = '${{ github.sha }}';
 });
 expectFailure('mutable candidate action regression', (candidateCopy) => {
   findStep(candidateCopy, 'build', 'Upload Pages candidate').uses = 'actions/upload-artifact@v4';
@@ -290,6 +311,14 @@ expectFailure('publisher extra write permission regression', (_candidateCopy, pu
 expectFailure('publisher trust guard regression', (_candidateCopy, publisherCopy) => {
   const guard = findStep(publisherCopy, 'publish', 'Validate trusted publish context');
   guard.run = guard.run.replaceAll('WORKFLOW_RUN_REPOSITORY', 'REMOVED_REPOSITORY_GUARD');
+});
+expectFailure('publisher stale-run guard regression', (_candidateCopy, publisherCopy) => {
+  const guard = findStep(publisherCopy, 'publish', 'Validate trusted publish context');
+  guard.run = guard.run.replaceAll('source workflow is stale', 'source workflow is current');
+});
+expectFailure('publisher pre-stage revalidation regression', (_candidateCopy, publisherCopy) => {
+  const stage = findStep(publisherCopy, 'publish', 'Stage persistent Pages content');
+  stage.run = stage.run.replaceAll('refusing stale preview publish', 'allowing stale preview publish');
 });
 
 const syntax = spawnSync(process.execPath, ['--check', captureTemplatePath], { encoding: 'utf8' });
