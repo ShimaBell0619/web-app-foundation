@@ -13,7 +13,8 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. If the product uses project GitHub Pages, adopt the optional candidate/publisher pattern in `docs/pages.md` rather than designing a privileged PR deploy workflow from scratch.
+10. If the product uses project GitHub Pages, complete **Pages Phase 0** from `docs/pages.md`: copy the trusted publisher caller and merge it to the default branch before the first preview-enabled application/UI PR.
+11. After Phase 0 is on the default branch, complete **Pages Phase 1** by adding the candidate job to normal CI.
 
 ## Provenance
 
@@ -92,26 +93,39 @@ The guide is intentionally style-neutral: consumers keep their own visual direct
 
 ## Optional GitHub Pages previews
 
-Static project Pages consumers can add the Foundation Pages candidate job after `verify` and a separate trusted publisher caller.
+Static project Pages consumers use a two-phase adoption sequence.
+
+**Pages Phase 0 — trusted publisher bootstrap**
+
+- copy `templates/github-pages/pages-publish.yml`,
+- replace the Foundation SHA placeholder,
+- merge the workflow-only change to the repository's default branch,
+- configure Pages Source as GitHub Actions.
+
+This ordering is required because GitHub does not trigger a newly introduced `workflow_run` workflow for the same PR that introduces it.
+
+**Pages Phase 1 — candidate + application/UI work**
+
+- add the Foundation Pages candidate job after `verify`,
+- keep candidate execution read-only,
+- let the already-trusted default-branch publisher publish successful same-repository candidates.
 
 The standard pattern provides:
 
-- GitHub Actions as the Pages publishing source,
 - production root plus temporary `/pr-N/` previews,
-- same-repository PR publication only,
 - serialized aggregate staging and PR-close cleanup,
 - optional 390px/1440px screenshots embedded in one updatable PR comment,
 - a trust split where application code runs only in the read-only candidate job and the write-enabled publisher never checks out or executes PR code.
 
-See `docs/pages.md` for the complete caller snippets and security checklist. Keep the Pages workflows pinned to the same reviewed Foundation commit as the reusable CI workflow unless a deliberate upgrade says otherwise.
+See `docs/pages.md` for the exact sequence, caller template, and security checklist.
 
 ## Deployment safety boundary
 
 The Foundation does not select a deployment provider, but derived apps should preserve these provider-independent rules:
 
-- publish only source commit SHA `X` after the required quality gates have succeeded for that same SHA `X`,
-- do not let a separate deploy trigger race ahead of CI for the same commit,
-- prefer promoting/reusing the artifact that was validated; if rebuilding is necessary, bind the publish to the already-validated source SHA,
+- publish only source commit SHA `X` after the required quality gates have succeeded for that same revision,
+- do not let a separate deploy trigger race ahead of CI,
+- prefer promoting/reusing the artifact that was validated; if rebuilding is necessary, bind the publish to the already-validated source revision,
 - separate unprivileged build/test work from privileged publish credentials,
 - never execute untrusted PR code in a privileged publish context,
 - do not place secrets or privileged state in caches; privileged publish jobs should avoid caches unless a reviewed design proves they are safe and necessary.
