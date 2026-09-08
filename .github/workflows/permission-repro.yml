@@ -1,0 +1,14 @@
+name: Permission repro caller
+
+on:
+  push:
+    branches: [fix/issue-22-publisher-permissions]
+
+permissions:
+  contents: read
+
+jobs:
+  call:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/permission-repro-called.yml
