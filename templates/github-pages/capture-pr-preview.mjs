@@ -15,10 +15,14 @@ const reviewUrl = `http://${host}:${port}${basePath}`;
 
 await mkdir(reviewDir, { recursive: true });
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const viteCommand = path.resolve(
+  'node_modules',
+  '.bin',
+  process.platform === 'win32' ? 'vite.cmd' : 'vite',
+);
 const server = spawn(
-  npmCommand,
-  ['run', 'dev', '--', '--host', host, '--port', String(port), '--strictPort', '--base', basePath],
+  viteCommand,
+  ['--host', host, '--port', String(port), '--strictPort', '--base', basePath],
   {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, BROWSER: 'none' },
@@ -49,26 +53,41 @@ async function waitForServer() {
   throw new Error(`preview server did not become ready:\n${serverLog}`);
 }
 
+async function stopServer() {
+  if (server.exitCode !== null) return;
+
+  const exited = new Promise((resolve) => server.once('exit', resolve));
+  server.kill('SIGTERM');
+  await Promise.race([
+    exited,
+    new Promise((resolve) => setTimeout(resolve, 2_000)),
+  ]);
+
+  if (server.exitCode === null) {
+    server.kill('SIGKILL');
+    await exited;
+  }
+}
+
+async function capture(page, viewport, filename) {
+  await page.setViewportSize(viewport);
+  await page.goto(reviewUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+  await page.waitForTimeout(300);
+  await page.screenshot({
+    path: path.join(reviewDir, filename),
+    fullPage: true,
+  });
+}
+
 let browser;
 try {
   await waitForServer();
   browser = await chromium.launch();
   const page = await browser.newPage();
 
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(reviewUrl, { waitUntil: 'networkidle' });
-  await page.screenshot({
-    path: path.join(reviewDir, 'desktop.png'),
-    fullPage: true,
-  });
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(reviewUrl, { waitUntil: 'networkidle' });
-  await page.screenshot({
-    path: path.join(reviewDir, 'mobile.png'),
-    fullPage: true,
-  });
+  await capture(page, { width: 1440, height: 1000 }, 'desktop.png');
+  await capture(page, { width: 390, height: 844 }, 'mobile.png');
 } finally {
   await browser?.close();
-  if (server.exitCode === null) server.kill('SIGTERM');
+  await stopServer();
 }
