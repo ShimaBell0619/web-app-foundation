@@ -13,6 +13,7 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
+10. If the product uses project GitHub Pages, adopt the optional candidate/publisher pattern in `docs/pages.md` rather than designing a privileged PR deploy workflow from scratch.
 
 ## Provenance
 
@@ -82,6 +83,21 @@ Example for a JavaScript-only app with no separate type checker:
 ## E2E contract
 
 `run_e2e: true` requires a `test:e2e` script. That script must terminate and own the runtime lifecycle it needs: browser availability/setup, application/server startup and readiness, test execution, and cleanup. If those responsibilities require provider-specific or privileged setup, prefer an app-owned E2E job and keep the shared workflow focused on unprivileged quality validation.
+
+## Optional GitHub Pages previews
+
+Static project Pages consumers can add the Foundation Pages candidate job after `verify` and a separate trusted publisher caller.
+
+The standard pattern provides:
+
+- GitHub Actions as the Pages publishing source,
+- production root plus temporary `/pr-N/` previews,
+- same-repository PR publication only,
+- serialized aggregate staging and PR-close cleanup,
+- optional 390px/1440px screenshots embedded in one updatable PR comment,
+- a trust split where application code runs only in the read-only candidate job and the write-enabled publisher never checks out or executes PR code.
+
+See `docs/pages.md` for the complete caller snippets and security checklist. Keep the Pages workflows pinned to the same reviewed Foundation commit as the reusable CI workflow unless a deliberate upgrade says otherwise.
 
 ## Deployment safety boundary
 

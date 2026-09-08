@@ -39,6 +39,14 @@ Agents do not treat the first implementation pass as complete: read contracts ->
 
 The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Deployment providers remain application decisions, but automated publish must use the same source SHA that passed required quality gates.
 
+## Optional GitHub Pages capability
+
+For static project Pages consumers, `.github/workflows/web-pages-candidate.yml` and `.github/workflows/web-pages-publish.yml` provide an optional production + temporary PR preview pattern.
+
+The capability deliberately separates unprivileged application build/screenshot work from privileged Pages publication. The publisher consumes a candidate artifact from a successful CI workflow run without checking out or executing PR source code. It also supports `/pr-N/` previews, close cleanup, serialized aggregate staging, and mobile-friendly screenshot comments.
+
+See `docs/pages.md` for the required caller workflows, permissions, security boundary, Vite base-path behavior, and screenshot template.
+
 ## Versioning
 
 - Semantic Versioning is the default.
@@ -47,4 +55,4 @@ The Foundation uses `actions/setup-node` npm download caching, never a `node_mod
 - The Changesets CLI is an exact devDependency covered by `package-lock.json` and `npm ci`.
 - `CHANGELOG.md` records released Foundation changes.
 
-See `docs/adoption.md`, `docs/ci-performance.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ci-performance.md`, `docs/pages.md`, and `docs/versioning.md` for the detailed contracts.
