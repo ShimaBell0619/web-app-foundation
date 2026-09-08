@@ -138,7 +138,8 @@ jobs:
           OUTPUT_DIRECTORY: ${{ inputs.output_directory }}
           REVIEW_DIRECTORY: ${{ runner.temp }}/pages-review
           ENABLE_REVIEW_IMAGES: ${{ inputs.enable_review_images }}
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BUILD_SHA: ${{ github.sha }}
           TARGET: ${{ steps.target.outputs.target }}
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
           PAGES_BASE_PATH: ${{ steps.target.outputs.base }}
@@ -176,6 +177,7 @@ jobs:
           const path = process.argv[2];
           const metadata = {
             sourceSha: process.env.SOURCE_SHA,
+            buildSha: process.env.BUILD_SHA,
             target: process.env.TARGET,
             prNumber: Number(process.env.PR_NUMBER),
             basePath: process.env.PAGES_BASE_PATH,
