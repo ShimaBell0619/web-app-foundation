@@ -104,8 +104,15 @@ For changes to authentication/authorization, destructive migrations, release/pub
 - Preserve keyboard support, visible focus, meaningful labels, error association, and appropriate target sizing.
 - Design responsive behavior from available layout space rather than device-name checks.
 - User-facing UI changes require actual rendered validation. Source inspection alone is not sufficient.
-- Add E2E, visual regression, or accessibility automation when the protected flow justifies its CI/runtime cost; do not create a large browser matrix by default.
-- Keep UI-specific design decisions in `DESIGN.md`, not in this file.
+- Before substantial UI implementation, read the product-specific direction and information hierarchy from `DESIGN.md`. If they are missing and the choice materially affects the experience, establish them there rather than filling the gap with a generic dashboard/template default.
+- Do not treat common AI/generic UI signals—equal KPI cards, repeated cards/pills, soft icon boxes, decorative gradients/glows/orbs, uppercase eyebrow labels, arbitrary section numbers, or similar patterns—as either mandatory defaults or blanket violations. Keep them when they serve the product; question them when no product/data/workflow/accessibility reason explains them.
+- Material user-facing changes use a **render → critique → fix → re-render** loop. Review the rendered result independently of implementation effort, correct material findings, and render again after the correction.
+- As a default rendered-review baseline, inspect roughly 1440px desktop, 390px mobile, and 320px narrow layouts, then add product-specific widths when needed. These values are review baselines, not universal breakpoints or device-support promises.
+- At relevant widths, check unintended horizontal overflow, long/real text wrapping, hierarchy under constrained space, keyboard reachability, visible focus, and status/state meaning without color-only dependence.
+- For Japanese/CJK interfaces, inspect real line breaking and font fallback in rendered output; do not assume a Latin-focused font stack or one CI browser matches target devices.
+- Add E2E, visual regression, or accessibility automation when the protected flow justifies its CI/runtime cost; automate durable invariants rather than creating a large browser matrix by default.
+- Screenshots and preview comments are review conveniences, not substitutes for product-specific behavioral/accessibility assertions.
+- Keep UI-specific design decisions in `DESIGN.md`, not in this file. Use Foundation guidance such as `docs/ui-review.md` as a method, not as a shared visual style.
 
 ## Dependencies and supply chain
 
