@@ -108,7 +108,7 @@ function validateCandidate(workflow) {
   assert(assembleStep.env?.SOURCE_SHA === '${{ github.sha }}', 'candidate metadata must bind to the checked-out workflow SHA');
   const assemble = String(assembleStep.run ?? '');
   for (const marker of [
-    'site/index.html',
+    'site_dir/index.html',
     'mobile.png',
     'desktop.png',
     'metadata.json',
