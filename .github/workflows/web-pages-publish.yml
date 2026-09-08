@@ -17,7 +17,7 @@ on:
         type: number
         default: 0
       source_sha:
-        description: Exact source SHA associated with the successful CI workflow run.
+        description: PR head SHA or push SHA reported by workflow_run.head_sha.
         required: false
         type: string
         default: ''
@@ -70,6 +70,7 @@ jobs:
       - name: Validate trusted publish context
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
           RUN_ID: ${{ inputs.source_run_id }}
           SOURCE_SHA: ${{ inputs.source_sha }}
@@ -124,6 +125,11 @@ jobs:
                 echo 'production publish requires pr_number=0' >&2
                 exit 1
               fi
+              current_sha="$(gh api "repos/${REPOSITORY}/commits/${PRODUCTION_BRANCH}" --jq '.sha')"
+              if [[ "$current_sha" != "$SOURCE_SHA" ]]; then
+                echo 'source workflow is stale relative to the current production branch head' >&2
+                exit 1
+              fi
               ;;
             preview)
               if [[ "$WORKFLOW_RUN_EVENT" != 'pull_request' ]]; then
@@ -132,6 +138,13 @@ jobs:
               fi
               if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ || "$PR_NUMBER" != "$WORKFLOW_RUN_PR_NUMBER" ]]; then
                 echo 'preview pr_number must match the triggering workflow run PR' >&2
+                exit 1
+              fi
+              current_state="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.state')"
+              current_repo="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.repo.full_name')"
+              current_sha="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+              if [[ "$current_state" != 'open' || "$current_repo" != "$REPOSITORY" || "$current_sha" != "$SOURCE_SHA" ]]; then
+                echo 'source workflow is stale or no longer eligible for same-repository preview publication' >&2
                 exit 1
               fi
               ;;
@@ -186,6 +199,12 @@ jobs:
               throw new Error(`candidate metadata mismatch for ${key}: expected ${JSON.stringify(value)}, got ${JSON.stringify(metadata[key])}`);
             }
           }
+          if (!/^[0-9a-f]{40}$/.test(String(metadata.buildSha ?? ''))) {
+            throw new Error(`candidate metadata buildSha must be a full SHA: ${JSON.stringify(metadata.buildSha)}`);
+          }
+          if (metadata.target === 'production' && metadata.buildSha !== metadata.sourceSha) {
+            throw new Error('production candidate buildSha must equal sourceSha');
+          }
           NODE
 
           if [[ "$TARGET" == 'preview' && "$EXPECT_REVIEW_IMAGES" == 'true' ]]; then
@@ -203,11 +222,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_DIR: ${{ runner.temp }}/web-pages-candidate
+          SOURCE_SHA: ${{ inputs.source_sha }}
           TARGET: ${{ inputs.publish_target }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          PRODUCTION_BRANCH: ${{ inputs.production_branch }}
           EXPECT_REVIEW_IMAGES: ${{ inputs.expect_review_images }}
         run: |
           set -euo pipefail
+
+          if [[ "$TARGET" == 'production' ]]; then
+            current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${PRODUCTION_BRANCH}" --jq '.sha')"
+            if [[ "$current_sha" != "$SOURCE_SHA" ]]; then
+              echo 'production branch advanced before Pages staging; refusing stale publish' >&2
+              exit 1
+            fi
+          else
+            current_state="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.state')"
+            current_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.repo.full_name')"
+            current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+            if [[ "$current_state" != 'open' || "$current_repo" != "$GITHUB_REPOSITORY" || "$current_sha" != "$SOURCE_SHA" ]]; then
+              echo 'pull request advanced or closed before Pages staging; refusing stale preview publish' >&2
+              exit 1
+            fi
+          fi
+
           remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           publish_dir="${RUNNER_TEMP}/pages-content"
           deploy_dir="${RUNNER_TEMP}/pages-deploy"
