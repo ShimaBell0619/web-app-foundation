@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- 4675752: Harden reusable Web CI regression detection for disabled required jobs and preflight checks, and cover required-script opt-out behavior symmetrically.
+
 ## 0.4.0
 
 ### Minor Changes
