@@ -60,6 +60,20 @@ function mutate(dir, file, transform, label = file) {
   writeFileSync(path, after);
 }
 
+function setField(target, key, value, label) {
+  if (!target || typeof target !== 'object') {
+    throw new Error(`${label}: mutation target is not an object`);
+  }
+  const before = target[key];
+  target[key] = value;
+  if (Object.is(before, target[key])) {
+    throw new Error(`${label}: intended field ${String(key)} did not change`);
+  }
+  if (!Object.is(target[key], value)) {
+    throw new Error(`${label}: intended field ${String(key)} was not set to the requested value`);
+  }
+}
+
 function mutateJson(dir, file, mutator, label = file) {
   mutate(dir, file, (text) => {
     const value = JSON.parse(text);
@@ -71,7 +85,12 @@ function mutateJson(dir, file, mutator, label = file) {
 function mutateWorkflow(dir, file, mutator, label = file) {
   mutate(dir, file, (text) => {
     const value = parseYaml(text);
+    const before = JSON.stringify(value);
     mutator(value);
+    const after = JSON.stringify(value);
+    if (after === before) {
+      throw new Error(`${label}: structured workflow mutation did not change ${file}`);
+    }
     return stringifyYaml(value);
   }, label);
 }
@@ -85,12 +104,12 @@ function replaceExactly(text, pattern, replacement, label) {
 
 function setFoundationVersion(dir, version) {
   mutateJson(dir, 'package.json', (json) => {
-    json.version = version;
+    setField(json, 'version', version, `set package version ${version}`);
   }, `set package version ${version}`);
 
   mutateJson(dir, 'package-lock.json', (json) => {
-    json.version = version;
-    json.packages[''].version = version;
+    setField(json, 'version', version, `set lock version ${version}`);
+    setField(json.packages[''], 'version', version, `set root lock version ${version}`);
   }, `set lock version ${version}`);
 
   mutate(dir, 'README.md', (text) => replaceExactly(
@@ -125,12 +144,12 @@ function findStep(workflow, name) {
 function mutateFirstExternalUses(workflow, replacement) {
   for (const job of Object.values(workflow.jobs ?? {})) {
     if (typeof job?.uses === 'string' && !job.uses.startsWith('./')) {
-      job.uses = replacement(job.uses);
+      setField(job, 'uses', replacement(job.uses), 'external job uses mutation');
       return;
     }
     for (const step of job?.steps ?? []) {
       if (typeof step?.uses === 'string' && !step.uses.startsWith('./')) {
-        step.uses = replacement(step.uses);
+        setField(step, 'uses', replacement(step.uses), 'external step uses mutation');
         return;
       }
     }
@@ -151,7 +170,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateJson(dir, 'package.json', (json) => {
-        json.version = nextPatch(version);
+        setField(json, 'version', nextPatch(version), `version mismatch from ${version}`);
       }, `version mismatch from ${version}`);
       run(dir, false, `version mismatch from ${version}`);
     }
@@ -170,7 +189,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
-        findStep(workflow, 'Install dependencies').run = 'echo "run: npm ci"';
+        setField(findStep(workflow, 'Install dependencies'), 'run', 'echo "run: npm ci"', 'npm ci no-op mutation');
       }, 'npm ci no-op mutation');
       run(dir, false, `npm ci no-op from ${version}`);
     }
@@ -178,7 +197,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
-        workflow.permissions.actions = 'write';
+        setField(workflow.permissions, 'actions', 'write', 'top-level write permission mutation');
       }, 'top-level write permission mutation');
       run(dir, false, `top-level write permission from ${version}`);
     }
@@ -186,7 +205,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/foundation-ci.yml', (workflow) => {
-        workflow.jobs.validate.permissions = { contents: 'write' };
+        setField(workflow.jobs.validate, 'permissions', { contents: 'write' }, 'job write permission mutation');
       }, 'job write permission mutation');
       run(dir, false, `job write permission from ${version}`);
     }
@@ -194,7 +213,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/web-pages-publish.yml', (workflow) => {
-        workflow.jobs.publish.permissions.packages = 'write';
+        setField(workflow.jobs.publish.permissions, 'packages', 'write', 'publisher unexpected write permission mutation');
       }, 'publisher unexpected write permission mutation');
       run(dir, false, `publisher unexpected write permission from ${version}`);
     }
@@ -234,7 +253,39 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
-        findStep(workflow, 'Static checks').if = '${{ false }}';
+        setField(workflow.jobs.verify, 'if', '${{ false }}', 'disabled verify job expression mutation');
+      }, 'disabled verify job expression mutation');
+      run(dir, false, `disabled verify job expression from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
+        setField(workflow.jobs.verify, 'if', false, 'disabled verify job boolean mutation');
+      }, 'disabled verify job boolean mutation');
+      run(dir, false, `disabled verify job boolean from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
+        setField(findStep(workflow, 'Validate npm script contract'), 'if', '${{ false }}', 'disabled script-contract preflight mutation');
+      }, 'disabled script-contract preflight mutation');
+      run(dir, false, `disabled script-contract preflight from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
+        setField(findStep(workflow, 'Validate npm script contract'), 'continue-on-error', true, 'ignored script-contract preflight failure mutation');
+      }, 'ignored script-contract preflight failure mutation');
+      run(dir, false, `ignored script-contract preflight failure from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
+        setField(findStep(workflow, 'Static checks'), 'if', '${{ false }}', 'disabled check condition mutation');
       }, 'disabled check condition mutation');
       run(dir, false, `disabled check condition from ${version}`);
     }
@@ -242,7 +293,7 @@ try {
     {
       const dir = makeCopy(version); dirs.push(dir);
       mutateWorkflow(dir, '.github/workflows/web-ci.yml', (workflow) => {
-        findStep(workflow, 'Production build')['continue-on-error'] = true;
+        setField(findStep(workflow, 'Production build'), 'continue-on-error', true, 'ignored build failure mutation');
       }, 'ignored build failure mutation');
       run(dir, false, `ignored build failure from ${version}`);
     }

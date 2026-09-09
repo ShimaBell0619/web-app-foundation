@@ -30,6 +30,12 @@ const defaultScripts = {
   'test:e2e': 'echo e2e',
 };
 
+function withoutScript(name) {
+  const scripts = { ...defaultScripts };
+  delete scripts[name];
+  return scripts;
+}
+
 function runCase(label, {
   scripts = defaultScripts,
   env = {},
@@ -63,34 +69,37 @@ function runCase(label, {
 }
 
 runCase('default required scripts', { shouldPass: true });
-runCase('missing check', {
-  scripts: { ...defaultScripts, check: undefined },
-  shouldPass: false,
-});
-runCase('check opt-out without reason', {
-  env: { RUN_CHECK: 'false' },
-  shouldPass: false,
-});
-runCase('check opt-out with reason', {
-  env: { RUN_CHECK: 'false', CHECK_OPT_OUT_REASON: 'JavaScript-only fixture' },
-  shouldPass: true,
-});
-runCase('typecheck opt-out without reason', {
-  env: { RUN_TYPECHECK: 'false' },
-  shouldPass: false,
-});
-runCase('typecheck opt-out with reason', {
-  env: { RUN_TYPECHECK: 'false', TYPECHECK_OPT_OUT_REASON: 'No static type system' },
-  shouldPass: true,
-});
-runCase('test opt-out without reason', {
-  env: { RUN_TEST: 'false' },
-  shouldPass: false,
-});
-runCase('test opt-out with reason', {
-  env: { RUN_TEST: 'false', TEST_OPT_OUT_REASON: 'Temporary approved PoC exception' },
-  shouldPass: true,
-});
+
+const requiredGates = [
+  ['check', 'RUN_CHECK', 'CHECK_OPT_OUT_REASON'],
+  ['typecheck', 'RUN_TYPECHECK', 'TYPECHECK_OPT_OUT_REASON'],
+  ['test', 'RUN_TEST', 'TEST_OPT_OUT_REASON'],
+];
+
+for (const [scriptName, runEnv, reasonEnv] of requiredGates) {
+  const scripts = withoutScript(scriptName);
+
+  runCase(`missing ${scriptName}`, {
+    scripts,
+    shouldPass: false,
+  });
+  runCase(`${scriptName} opt-out with empty reason`, {
+    scripts,
+    env: { [runEnv]: 'false', [reasonEnv]: '' },
+    shouldPass: false,
+  });
+  runCase(`${scriptName} opt-out with whitespace-only reason`, {
+    scripts,
+    env: { [runEnv]: 'false', [reasonEnv]: '   \t' },
+    shouldPass: false,
+  });
+  runCase(`${scriptName} opt-out with explicit reason and script absent`, {
+    scripts,
+    env: { [runEnv]: 'false', [reasonEnv]: `Approved ${scriptName} opt-out` },
+    shouldPass: true,
+  });
+}
+
 runCase('build cannot be opted out', {
   scripts: { ...defaultScripts, build: undefined },
   env: {
