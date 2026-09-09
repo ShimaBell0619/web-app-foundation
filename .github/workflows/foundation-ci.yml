@@ -41,6 +41,9 @@ jobs:
       - name: Run reusable Pages contract tests
         run: npm run foundation:test:web-pages
 
+      - name: Run fixed Staging profile contract tests
+        run: npm run foundation:test:vercel-staging
+
       - name: Exercise release cycle
         run: npm run foundation:test:release
 

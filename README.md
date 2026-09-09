@@ -44,6 +44,7 @@ The Foundation now separates provider-independent quality rules from optional pr
 
 - `docs/pages.md` — GitHub Pages candidate/publisher capability with explicit privilege separation.
 - `docs/vercel.md` — Vercel native Git-integrated Preview/Production hosting profile; no redundant deployment Action.
+- `docs/vercel-fixed-staging.md` — optional fixed-origin, single-PR Staging slot layered on Vercel Git Integration for OAuth/origin-dependent validation.
 - `docs/application-releases.md` — application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
 - `docs/azure-oidc.md` — GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
 
@@ -66,4 +67,4 @@ See `docs/pages.md` for the required caller workflows, permissions, security bou
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.

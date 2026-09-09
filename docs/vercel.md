@@ -77,9 +77,13 @@ For example, Google OAuth Authorized JavaScript origins require exact origins an
 
 Document this distinction rather than treating "Preview deployment succeeded" as proof that all external identity integrations are functional.
 
+When exact-origin integration validation is a recurring requirement, layer the optional `docs/vercel-fixed-staging.md` profile on top of this profile. It keeps ordinary PR Preview intact while providing one explicitly selected `staging` branch/domain whose ref is moved to the current PR HEAD.
+
 ## Custom domains
 
 Custom-domain ownership is application/provider configuration, not a Foundation contract. Record the canonical Production URL in the consuming application's README/deployment documentation and test it after DNS/domain changes.
+
+A fixed Staging Branch Domain is likewise application/provider configuration. The Foundation can provide the trusted ref-selection workflow, but Vercel/DNS/OAuth allowlists remain external setup.
 
 ## Proven consumer evidence
 
@@ -90,9 +94,11 @@ Custom-domain ownership is application/provider configuration, not a Foundation 
 - a custom Production domain;
 - Vercel-owned `VITE_GOOGLE_CLIENT_ID` build configuration;
 - a minimal SPA rewrite;
-- exact-origin Google OAuth configuration for the Production domain.
+- exact-origin Google OAuth configuration for the Production domain;
+- a fixed `staging` Branch Domain for OAuth/origin-dependent validation while retaining ordinary PR Preview;
+- explicit trusted-main ref promotion of one selected same-repository PR HEAD into the `staging` slot.
 
-This consumer evidence is the basis for this optional profile; GitHub Pages remains a separate supported optional capability.
+This consumer evidence is the basis for these optional Vercel profiles; GitHub Pages remains a separate supported optional capability.
 
 ## References
 
@@ -100,3 +106,4 @@ This consumer evidence is the basis for this optional profile; GitHub Pages rema
   - https://vercel.com/kb/git-integration
 - Vercel: Environments
   - https://vercel.com/kb/environments
+- `docs/vercel-fixed-staging.md`
