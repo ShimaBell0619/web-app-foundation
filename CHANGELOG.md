@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 2b5568c: Add proven operational profiles for Vercel Git-integrated hosting, downstream GitHub Release publication, and GitHub-to-Azure OIDC with Flexible Federated Identity Credentials.
+
 All notable consumer-facing changes to Web App Foundation are documented here.
 
 The project follows Semantic Versioning and remains pre-1.0 while its contracts are validated in real applications.
