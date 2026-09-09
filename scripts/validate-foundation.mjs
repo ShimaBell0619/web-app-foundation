@@ -245,12 +245,22 @@ function validateReusableWebCi(workflow, path) {
     fail(`${path} must define verify job`);
     return;
   }
+  if (job.if !== undefined) {
+    fail(`${path} verify job must not be conditional`);
+  }
   if (job['continue-on-error'] !== undefined && job['continue-on-error'] !== false) {
     fail(`${path} verify job must not continue on error`);
   }
 
   const contract = findStep(workflow, 'verify', 'Validate npm script contract', path);
   if (contract) {
+    if (contract.if !== undefined) {
+      fail(`${path} script-contract step must not be conditional`);
+    }
+    if (contract['continue-on-error'] !== undefined && contract['continue-on-error'] !== false) {
+      fail(`${path} script-contract step must not continue on error`);
+    }
+
     const expectedEnv = {
       RUN_CHECK: '${{ inputs.run_check }}',
       CHECK_OPT_OUT_REASON: '${{ inputs.check_opt_out_reason }}',
