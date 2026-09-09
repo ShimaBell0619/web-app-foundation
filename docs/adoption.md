@@ -13,8 +13,11 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. If the product uses project GitHub Pages, complete **Pages Phase 0** from `docs/pages.md`: copy the trusted publisher caller and merge it to the default branch before the first preview-enabled application/UI PR.
-11. After Phase 0 is on the default branch, complete **Pages Phase 1** by adding the candidate job to normal CI.
+10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically.
+11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
+12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
+
+For GitHub Pages specifically, complete **Pages Phase 0** before the first preview-enabled application/UI PR, then complete **Pages Phase 1** as documented below.
 
 ## Provenance
 
@@ -119,21 +122,55 @@ The standard pattern provides:
 
 See `docs/pages.md` for the exact sequence, caller template, and security checklist.
 
+## Optional Vercel Git integration
+
+For applications that prioritize native Preview deployments and minimal deployment-workflow maintenance:
+
+- connect/import the repository in Vercel;
+- keep the Foundation CI caller as the quality gate;
+- let Vercel own branch/PR Preview deployment and the configured Production Branch deployment;
+- keep Production/Preview build configuration in the corresponding Vercel environment scopes;
+- add `templates/vercel/vite-spa-vercel.json` only for a client-side routed Vite SPA that needs a catch-all fallback;
+- document third-party identity limitations such as exact OAuth origins separately from deployment success.
+
+Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff and the alternative when exact post-CI publish ordering is required.
+
+## Optional application GitHub Release flow
+
+A versioned product milestone is explicit release intent, not a side effect of merging ordinary work.
+
+For npm-based apps using root `package.json` as the version source, `templates/release/release.yml` provides a copyable app-owned pattern that publishes only after successful `main` CI and binds the tag/release to `workflow_run.head_sha`.
+
+Before reporting a requested release complete, verify the application version, immutable `vX.Y.Z` tag, published GitHub Release, and Production status when applicable. See `docs/application-releases.md`.
+
+## Optional GitHub Actions to Azure OIDC
+
+When an application needs Azure create/update/delete validation through GitHub Actions:
+
+- keep client/tenant/subscription IDs as GitHub Variables rather than client-secret credentials;
+- grant `id-token: write` only to jobs that need OIDC;
+- pin `Azure/login` to a reviewed full commit SHA;
+- treat Microsoft Entra FIC trust and Azure RBAC as separate boundaries;
+- use real workflow claims to validate the FIC rather than assuming a historical name-based subject shape.
+
+For convenience-first personal repository fleets, `docs/azure-oidc.md` documents the owner-wide Flexible FIC pattern that was proven with `ms-credentials-tracker`.
+
 ## Deployment safety boundary
 
 The Foundation does not select a deployment provider, but derived apps should preserve these provider-independent rules:
 
-- publish only source commit SHA `X` after the required quality gates have succeeded for that same revision,
-- do not let a separate deploy trigger race ahead of CI,
-- prefer promoting/reusing the artifact that was validated; if rebuilding is necessary, bind the publish to the already-validated source revision,
-- separate unprivileged build/test work from privileged publish credentials,
-- never execute untrusted PR code in a privileged publish context,
-- do not place secrets or privileged state in caches; privileged publish jobs should avoid caches unless a reviewed design proves they are safe and necessary.
+- keep required quality CI and deployment status independently visible;
+- do not treat a Preview/hosting check as a substitute for application tests;
+- bind privileged release/promotion operations to a known validated source revision when the provider/workflow supports it;
+- document any hosting-native sequence that starts Production deployment before exact-SHA post-merge CI completes;
+- separate unprivileged build/test work from privileged credentials;
+- never execute untrusted PR code in a privileged publish/release context;
+- do not place secrets or privileged state in caches; privileged jobs should avoid caches unless a reviewed design proves they are safe and necessary.
 
 ## Upgrading Foundation
 
 1. Review `CHANGELOG.md` and the diff between the adopted and target Foundation commits.
-2. Identify changes to copied documents separately from reusable workflows.
+2. Identify changes to copied documents/templates separately from reusable workflows.
 3. Preserve app-specific deviations unless an approved change supersedes them.
 4. Update copied rules/templates only where they remain appropriate for the app.
 5. Update the reusable-workflow SHA after review.

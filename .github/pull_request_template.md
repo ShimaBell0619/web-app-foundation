@@ -19,7 +19,7 @@ Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR 
 - PRODUCT.md: none / updated
 - DESIGN.md: none / updated
 - AGENTS.md: none / updated
-- Architecture/security specialist docs: none / updated
+- Architecture/security/release/operations specialist docs: none / updated
 
 ## Validation
 
@@ -53,6 +53,19 @@ If required review could not be completed:
 ## Security / runtime-network impact
 
 - 
+
+## Release intent
+
+- [ ] This PR is not itself a requested versioned application/Foundation release.
+- [ ] This PR is part of an explicit release milestone; version/tag/GitHub Release evidence is required before the milestone is reported complete.
+
+If release intent is explicit:
+
+- Version source / requested version:
+- Validated release commit:
+- Expected tag:
+- GitHub Release / prerelease expectation:
+- Production deployment/status evidence when applicable:
 
 ## Changeset
 

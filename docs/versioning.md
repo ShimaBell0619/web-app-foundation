@@ -6,6 +6,8 @@ Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for Web App Foundation and, by def
 
 Version numbers communicate product/repository compatibility. They are not substitutes for deployment identifiers, commit SHAs, database migration versions, or environment names.
 
+Downstream application releases are a separate concern from Foundation releases. When an application explicitly publishes a versioned milestone, use `docs/application-releases.md`; a Git tag alone is not considered a complete release when the requested contract calls for a published GitHub Release.
+
 ## Pre-1.0 policy
 
 While Foundation `MAJOR = 0`:
@@ -74,6 +76,21 @@ A normal Foundation release is:
 8. downstream apps adopt the new Foundation deliberately.
 
 Do not mutate an existing released tag to point at different code. The complete release procedure should be exercised before the next Foundation release is treated as proven.
+
+## Downstream application release intent
+
+Application release publication must remain explicit. Do not infer that every merged feature PR should bump an application version or publish a release.
+
+When an Issue/user explicitly requests a versioned application release, the completion evidence should include:
+
+- the application-owned version source at the requested SemVer;
+- the exact validated commit intended for release;
+- immutable `vX.Y.Z` tag evidence;
+- a published GitHub Release associated with that tag;
+- prerelease status when the milestone is intentionally beta/preview;
+- Production deployment/status verification when the application has a Production host.
+
+The copyable downstream workflow in `templates/release/release.yml` binds publication to the successful `main` CI run's `workflow_run.head_sha` and refuses to move a conflicting existing tag. See `docs/application-releases.md` for the full application contract.
 
 ## Downstream provenance
 
