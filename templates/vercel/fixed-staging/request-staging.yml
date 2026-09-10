@@ -1,5 +1,5 @@
 name: Request PR for Fixed Staging
-run-name: Request Fixed Staging for PR #${{ inputs.pr_number }}
+run-name: 'Request Fixed Staging for PR #${{ inputs.pr_number }}'
 
 on:
   workflow_dispatch:

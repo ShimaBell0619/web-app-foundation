@@ -86,6 +86,7 @@ test('manual request workflow is read-only and emits a bounded request artifact'
   const workflow = readWorkflow('templates/vercel/fixed-staging/request-staging.yml');
   assert.ok(workflow.on?.workflow_dispatch?.inputs?.pr_number);
   assert.equal(workflow.on.workflow_dispatch.inputs.pr_number.required, true);
+  assert.equal(workflow['run-name'], 'Request Fixed Staging for PR #${{ inputs.pr_number }}');
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   assert.equal(workflow.jobs.request.if, "${{ github.ref == 'refs/heads/main' }}");
   assert.equal(
@@ -103,7 +104,8 @@ test('write-enabled publisher is workflow_run-only and trusts main request runs'
   const workflow = readWorkflow('templates/vercel/fixed-staging/deploy-staging.yml');
   assert.deepEqual(workflow.on?.workflow_run?.workflows, ['Request PR for Fixed Staging']);
   assert.deepEqual(workflow.on.workflow_run.types, ['completed']);
-  assert.deepEqual(workflow.permissions, {
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+  assert.deepEqual(workflow.jobs.deploy.permissions, {
     actions: 'read',
     contents: 'write',
     issues: 'write',
@@ -139,7 +141,8 @@ test('write-enabled publisher is workflow_run-only and trusts main request runs'
 test('cleanup uses trusted pull_request_target context and is not coupled to current base ref', () => {
   const workflow = readWorkflow('templates/vercel/fixed-staging/cleanup-staging.yml');
   assert.deepEqual(workflow.on?.pull_request_target?.types, ['closed']);
-  assert.deepEqual(workflow.permissions, { contents: 'write' });
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+  assert.deepEqual(workflow.jobs.cleanup.permissions, { contents: 'write' });
   assert.equal(
     workflow.jobs.cleanup.if,
     '${{ github.event.pull_request.head.repo.full_name == github.repository }}',
