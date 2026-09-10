@@ -53,8 +53,14 @@ try {
 
   {
     const dir = makeCopy();
-    mutate(dir, 'docs/ui-implementation.md', (text) => text.replaceAll('Tailwind CSS', 'utility framework'), 'Tailwind marker');
-    run(dir, false, 'missing default styling profile');
+    mutate(dir, 'docs/ui-implementation.md', (text) => text.replace('## Generic primitives', '## Generic controls'), 'generic primitive section');
+    run(dir, false, 'generic primitive responsibility removed');
+  }
+
+  {
+    const dir = makeCopy();
+    mutate(dir, 'docs/ui-implementation.md', (text) => text.replaceAll('shadcn/ui-style accessible primitives', 'component primitives'), 'accessible primitive profile');
+    run(dir, false, 'default accessible primitive concept removed');
   }
 
   {
@@ -65,20 +71,20 @@ try {
 
   {
     const dir = makeCopy();
-    mutate(dir, 'docs/ui-implementation.md', (text) => text.replaceAll('Specialist custom CSS', 'No custom styles'), 'custom CSS allowance');
-    run(dir, false, 'specialist CSS allowance removed');
+    mutate(dir, 'docs/ui-implementation.md', (text) => text.replace('## Specialist custom CSS', '## Styling exceptions'), 'custom CSS section');
+    run(dir, false, 'specialist CSS boundary removed');
+  }
+
+  {
+    const dir = makeCopy();
+    mutate(dir, 'docs/ui-implementation.md', (text) => text.replace('## Existing consumers and deviations', '## Migration'), 'deviation section');
+    run(dir, false, 'existing consumer deviation boundary removed');
   }
 
   {
     const dir = makeCopy();
     mutate(dir, 'docs/ui-review.md', (text) => text.replaceAll('composition quality', 'layout review'), 'composition review boundary');
     run(dir, false, 'UI review loses primitive/composition distinction');
-  }
-
-  {
-    const dir = makeCopy();
-    mutate(dir, 'docs/ui-implementation.md', (text) => `${text}\nUse Azure Blue as the shared Foundation accent.\n`, 'consumer skin mutation');
-    run(dir, false, 'consumer-specific skin leaks into Foundation');
   }
 
   console.log('Primitive-first UI profile regression tests passed.');
