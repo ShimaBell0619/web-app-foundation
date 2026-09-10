@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- fd58bb5: Harden copyable workflow template validation and downstream Application Release verification, including annotated-tag resolution, race-safe idempotency, and post-publication evidence checks.
+- 5f977de: Fix Fixed Staging publisher trust validation so dynamic workflow `run-name` values are not confused with the static request workflow identity selected by the `workflow_run` trigger.
+
 ## 0.8.0
 
 ### Minor Changes
