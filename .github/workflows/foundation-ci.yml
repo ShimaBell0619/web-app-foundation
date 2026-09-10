@@ -38,6 +38,9 @@ jobs:
       - name: Run reusable CI contract tests
         run: npm run foundation:test:web-ci
 
+      - name: Run application Release profile contract tests
+        run: npm run foundation:test:application-release
+
       - name: Run fixed Staging profile contract tests
         run: npm run foundation:test:vercel-staging
 
