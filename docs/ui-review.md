@@ -27,6 +27,17 @@ The application `DESIGN.md` should also identify:
 - responsive priority when space becomes constrained,
 - accessibility decisions that materially affect the design.
 
+## Separate primitive quality from composition quality
+
+Review the generic control layer and the page composition as separate quality dimensions. A screen can use excellent accessible primitives and still have weak UX because the hierarchy, area allocation, grouping, duplication, or task flow is wrong. Conversely, a distinctive composition is not a reason to accept fragile custom control behavior.
+
+For consumers using the default React profile in `docs/ui-implementation.md`:
+
+- **primitive quality** covers semantic HTML, keyboard/focus behavior, labels and accessible names, disabled/error states, target sizing, dialog/popover behavior, and consistency of generic controls;
+- **composition quality** covers information hierarchy, primary-versus-supporting area allocation, grouping, repeated information, semantic component boundaries, responsive ordering, density, typography, and whether the user can move from state recognition to the next relevant action.
+
+Do not respond to a composition problem by discarding a sound primitive foundation merely to make the UI appear more custom. Change the composition, semantic components, tokens, or hierarchy first when those are the actual source of the problem.
+
 ## Generic / AI-template review signals
 
 The following patterns are review signals, not forbidden components. Any of them can be appropriate when the product semantics justify them.
@@ -35,6 +46,8 @@ Question their use when they appear by default:
 
 - equal KPI cards for information with unequal importance,
 - repeated rounded cards or pills that add containment without clarifying grouping or interaction,
+- repeated Card + Icon + Heading + muted-copy composition inherited from a component-library demo rather than the product hierarchy,
+- identical radius/shadow/elevation treatment across unrelated component roles,
 - icons inside soft tinted boxes merely to decorate headings,
 - decorative gradients, glows, or abstract orbs unrelated to product data or workflow,
 - uppercase eyebrow labels or numbered sections that do not improve navigation or comprehension,
@@ -142,6 +155,6 @@ Pixel-perfect screenshot diffs are optional. Use them only when their maintenanc
 - `PRODUCT.md` owns product behavior, scope, and non-goals.
 - `DESIGN.md` owns the application's visual direction, hierarchy, interaction presentation, and design rationale.
 - `AGENTS.md` owns repeatable implementation/review behavior.
-- Foundation owns reusable guidance/templates and shared engineering contracts.
+- Foundation owns reusable guidance/templates and shared engineering contracts, including the default primitive-first implementation profile in `docs/ui-implementation.md`.
 
 Do not copy a consumer's specific colors, motifs, wording, credential/calendar metaphors, or layout into Foundation merely because that consumer produced a useful design lesson. Generalize the decision method, not the product skin.

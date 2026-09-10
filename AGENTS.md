@@ -126,6 +126,11 @@ Do not report formatting, naming taste, style preference, or routine lint/type i
 ## Web and UI baseline
 
 - Prefer semantic HTML, native browser behavior, progressive enhancement, and accessible primitives.
+- For a new React-oriented browser-first consumer, use the default primitive-first profile in `docs/ui-implementation.md` unless the application documents a justified deviation: Tailwind CSS for styling infrastructure, shadcn/ui-style accessible generic primitives, and product-specific semantic components above them.
+- Keep a generic primitive layer such as `components/ui` free of product-domain meaning; product-specific state, hierarchy, actions, and presentation belong in semantic components above it.
+- Do not copy component-library demo/page composition as the application information architecture. Primitive reuse does not determine page composition.
+- Do not rebuild routine button, input, dialog, overlay, focus, or keyboard behavior in bespoke CSS when a reviewed mature primitive already supplies it; specialist custom CSS remains valid for justified product-specific visualizations/interactions.
+- Existing consumers do not require a migration solely to conform to the default profile; treat a migration as material UI work with an explicit objective and rendered review.
 - Preserve keyboard support, visible focus, meaningful labels, error association, and appropriate target sizing.
 - Design responsive behavior from available layout space rather than device-name checks.
 - User-facing UI changes require actual rendered validation. Source inspection alone is not sufficient.

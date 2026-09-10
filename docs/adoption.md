@@ -6,7 +6,7 @@ For a new application:
 
 1. Start from real product requirements rather than copying a full framework stack blindly.
 2. Copy `PRODUCT.base.md` to `PRODUCT.md` and replace template text with the approved product contract.
-3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale. For material UI work, use `docs/ui-review.md` to validate the rendered result against that product-specific direction.
+3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale. For a new React-oriented browser-first UI, adopt the default primitive-first profile in `docs/ui-implementation.md`; for material UI work, use `docs/ui-review.md` to validate the rendered result against that product-specific direction.
 4. Copy/adapt the relevant `AGENTS.md` rules. Add app-specific constraints rather than depending on chat memory.
 5. Add specialist documents only when needed, commonly `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/RELEASE.md`, or `docs/COMPATIBILITY.md`.
 6. Use a committed Node version file and package-manager lockfile.
@@ -93,6 +93,19 @@ Example for a JavaScript-only app with no separate type checker:
 For material user-facing changes, use `docs/ui-review.md` as the review method after the normal quality gate. It defines the product-specific design-direction check, render → critique → fix → re-render loop, 1440px / 390px / 320px baseline, overflow/focus/status review, and Japanese/CJK rendering notes.
 
 The guide is intentionally style-neutral: consumers keep their own visual direction and product-specific assertions in `DESIGN.md` and application tests.
+
+## Default React UI implementation profile
+
+For a new React-oriented browser-first consumer, use `docs/ui-implementation.md` as the default implementation layer beneath the product-specific `DESIGN.md`:
+
+- Tailwind CSS provides styling infrastructure and semantic token wiring;
+- shadcn/ui-style accessible primitives provide common interaction controls without forcing page composition;
+- a generic primitive layer stays free of product-domain meaning;
+- product-specific semantic components own hierarchy, domain state, actions, and data presentation;
+- specialist custom CSS remains valid for justified product-specific visualizations/interactions;
+- rendered review evaluates primitive quality and composition quality separately.
+
+Do not force-migrate an existing consumer only for conformity. Non-React consumers or applications with an established accessible design system may use an equivalent mature primitive approach and record the deviation in `DESIGN.md`, `AGENTS.md`, or Foundation provenance as appropriate.
 
 ## Selective independent code review
 
