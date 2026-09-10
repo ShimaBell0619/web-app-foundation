@@ -1,0 +1,61 @@
+name: Apply Issue 65 hardening v4
+
+on:
+  push:
+    branches:
+      - fix/issue-65-workflow-release-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout work branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/issue-65-workflow-release-hardening
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply bounded transformation
+        run: |
+          set -euo pipefail
+          sed -i "s/^release_yml = '''/release_yml = r'''/" .tmp/issue-65-apply.py
+          python .tmp/issue-65-apply.py
+          rm .tmp/issue-65-apply.py
+          rm .github/workflows/issue-65-apply-v4.yml
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate complete intended state
+        run: |
+          set -euo pipefail
+          npm run foundation:validate
+          npm run foundation:test
+          npm run foundation:test:web-ci
+          npm run foundation:test:application-release
+          npm run foundation:test:vercel-staging
+          npm run foundation:test:release
+          npm run foundation:release-validate
+
+      - name: Commit non-workflow portion
+        run: |
+          set -euo pipefail
+          git restore --source=HEAD -- .github/workflows/foundation-ci.yml .github/workflows/issue-65-apply-v4.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: harden workflow template and release contracts"
+          git push origin HEAD:fix/issue-65-workflow-release-hardening
