@@ -1,0 +1,37 @@
+name: Publish v0.7.0
+
+on:
+  push:
+    branches:
+      - chore/publish-v0.7.0
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_SHA: c968b8af1f666d8f6024cd9e292c91cbf631fefe
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify validated main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/main | cut -f1)"
+          test "$actual" = "$EXPECTED_SHA"
+      - name: Publish immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.7.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v0.7.0 already exists"
+            exit 0
+          fi
+          gh release create v0.7.0 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$EXPECTED_SHA" \
+            --title "v0.7.0" \
+            --notes $'## Highlights\n\n- Add the context-routed Chat-based AI implementation profile.\n- Route only change-relevant repository contracts and keep the Repository Context Packet session-local.\n- Extract Design Intent before implementation and map contract/AC -> implementation surface -> validation evidence.\n- Batch GitHub reads, writes, and CI around coherent candidates while preserving conflict and validation safety.\n- Explicitly reject unjustified overengineering and conformity-only migration of stable consumer code.'
