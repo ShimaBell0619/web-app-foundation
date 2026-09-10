@@ -11,8 +11,9 @@ When a user/Issue explicitly requests an application release, do not report the 
 ```text
 validated application commit
   -> application version source updated
-  -> immutable vX.Y.Z tag
+  -> immutable vX.Y.Z tag resolving to the validated commit
   -> published GitHub Release
+  -> post-publication tag / release verification
   -> hosting/deployment status checked when the app has a Production deployment
 ```
 
@@ -32,10 +33,13 @@ The template:
 
 - triggers only after the `CI` workflow completes;
 - continues only when that CI run succeeded for `main`;
-- checks out the exact `workflow_run.head_sha` that produced the successful CI result;
+- checks out the exact `workflow_run.head_sha` that produced the successful CI result without persisting Git credentials;
 - detects explicit root `package.json` SemVer change;
+- resolves lightweight and annotated tags to their underlying commit before accepting them;
 - refuses to move an existing conflicting tag;
-- safely treats an already-matching GitHub Release as idempotent;
+- safely treats an already-matching published GitHub Release as idempotent;
+- tolerates a concurrent same-tag publisher only when final verification proves the resulting Release is correct;
+- verifies published state, prerelease metadata, and tag target after publication;
 - creates a published GitHub Release only when version change expresses release intent;
 - supports GitHub prerelease publication through the template's `PRERELEASE` setting.
 
@@ -67,12 +71,20 @@ GitHub documents `workflow_run` as a privileged trigger; do not combine it with 
 For version `X.Y.Z`, expected tag is `vX.Y.Z`.
 
 - no tag/release -> create the release at the validated SHA;
-- matching release at the same validated SHA -> succeed idempotently;
-- tag exists at a different SHA -> fail; never move the tag;
-- release exists with an unexpected target -> fail;
+- matching published release whose tag resolves to the same validated SHA -> succeed idempotently;
+- matching lightweight or annotated tag with no Release -> reuse it only when it resolves to the validated SHA;
+- tag resolves to a different SHA -> fail; never move the tag;
+- release exists but is draft/unpublished -> fail;
+- release prerelease metadata differs from `PRERELEASE` -> fail final verification;
 - version did not change relative to the validated commit's first parent -> skip publication.
 
 If a repository intentionally uses merge commits or another version topology that makes first-parent comparison unsuitable, adapt the detection logic and document the deviation.
+
+The workflow resolves Git tag objects rather than comparing raw tag-object IDs. This matters for annotated tags, whose tag-object SHA intentionally differs from the commit SHA they ultimately reference.
+
+## Publication races
+
+A pre-publication check cannot by itself exclude another trusted run publishing the same tag concurrently. The template therefore performs final verification after publication. A concurrent same-tag result is accepted only when the resulting Release is published, has the configured prerelease state, and its tag resolves to the exact CI-validated SHA. Conflicting results fail closed.
 
 ## Prereleases
 

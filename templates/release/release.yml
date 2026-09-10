@@ -28,6 +28,7 @@ jobs:
         with:
           ref: ${{ env.VALIDATED_SHA }}
           fetch-depth: 2
+          persist-credentials: false
 
       - name: Detect explicit version change
         id: version
@@ -41,10 +42,16 @@ jobs:
             echo "Unsupported application version: $current" >&2
             exit 1
           fi
+          case "$PRERELEASE" in
+            true|false) ;;
+            *)
+              echo "PRERELEASE must be exactly 'true' or 'false'." >&2
+              exit 1
+              ;;
+          esac
 
           echo "version=$current" >> "$GITHUB_OUTPUT"
           echo "tag=v$current" >> "$GITHUB_OUTPUT"
-
           if [[ "$current" == "$previous" ]]; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "Application version did not change ($current); no release requested."
@@ -62,20 +69,47 @@ jobs:
         run: |
           set -euo pipefail
 
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json targetCommitish --jq .targetCommitish)"
-            if [[ "$existing" == "$VALIDATED_SHA" ]]; then
-              echo "Release $TAG already exists at validated SHA; nothing to do."
-              exit 0
+          resolve_tag_commit() {
+            local type sha depth=0
+            read -r type sha < <(
+              gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object | "\(.type) \(.sha)"'
+            )
+            while [[ "$type" == 'tag' ]]; do
+              depth=$((depth + 1))
+              if (( depth > 5 )); then
+                echo "Tag $TAG has an unexpectedly deep tag-object chain." >&2
+                return 1
+              fi
+              read -r type sha < <(
+                gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq '.object | "\(.type) \(.sha)"'
+              )
+            done
+            if [[ "$type" != 'commit' ]]; then
+              echo "Tag $TAG resolves to unsupported object type: $type" >&2
+              return 1
             fi
-            echo "Release $TAG already exists with unexpected target: $existing" >&2
-            exit 1
+            printf '%s\n' "$sha"
+          }
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
+            [[ "$draft" == 'false' ]] || { echo "Release $TAG exists but is not published." >&2; exit 1; }
+            existing_sha="$(resolve_tag_commit)"
+            [[ "$existing_sha" == "$VALIDATED_SHA" ]] || {
+              echo "Release $TAG resolves to $existing_sha instead of $VALIDATED_SHA" >&2
+              exit 1
+            }
+            echo "Release $TAG already exists at validated SHA; publication is idempotent."
+            exit 0
           fi
 
-          remote_sha="$(git ls-remote origin "refs/tags/$TAG" | awk '{print $1}')"
-          if [[ -n "$remote_sha" && "$remote_sha" != "$VALIDATED_SHA" ]]; then
-            echo "Tag $TAG already points to $remote_sha instead of $VALIDATED_SHA" >&2
-            exit 1
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            existing_sha="$(resolve_tag_commit)"
+            [[ "$existing_sha" == "$VALIDATED_SHA" ]] || {
+              echo "Tag $TAG resolves to $existing_sha instead of $VALIDATED_SHA" >&2
+              exit 1
+            }
+            echo "Existing tag $TAG resolves to the validated SHA."
           fi
 
       - name: Publish GitHub Release
@@ -86,7 +120,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             exit 0
           fi
@@ -96,9 +129,55 @@ jobs:
             prerelease_args+=(--prerelease)
           fi
 
-          gh release create "$TAG" \
+          if ! gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$VALIDATED_SHA" \
             --title "$TAG" \
             --generate-notes \
-            "${prerelease_args[@]}"
+            "${prerelease_args[@]}"; then
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "A concurrent publisher created $TAG; final verification will validate it."
+            else
+              exit 1
+            fi
+          fi
+
+      - name: Verify published release
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          resolve_tag_commit() {
+            local type sha depth=0
+            read -r type sha < <(
+              gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object | "\(.type) \(.sha)"'
+            )
+            while [[ "$type" == 'tag' ]]; do
+              depth=$((depth + 1))
+              (( depth <= 5 )) || { echo "Tag chain too deep for $TAG" >&2; return 1; }
+              read -r type sha < <(
+                gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq '.object | "\(.type) \(.sha)"'
+              )
+            done
+            [[ "$type" == 'commit' ]] || { echo "Unsupported final tag object: $type" >&2; return 1; }
+            printf '%s\n' "$sha"
+          }
+
+          draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
+          prerelease="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)"
+          resolved_sha="$(resolve_tag_commit)"
+
+          [[ "$draft" == 'false' ]] || { echo "Release $TAG is not published." >&2; exit 1; }
+          [[ "$prerelease" == "$PRERELEASE" ]] || {
+            echo "Release $TAG prerelease=$prerelease but expected $PRERELEASE" >&2
+            exit 1
+          }
+          [[ "$resolved_sha" == "$VALIDATED_SHA" ]] || {
+            echo "Release $TAG resolves to $resolved_sha instead of $VALIDATED_SHA" >&2
+            exit 1
+          }
+          echo "Verified $TAG at validated SHA $VALIDATED_SHA."

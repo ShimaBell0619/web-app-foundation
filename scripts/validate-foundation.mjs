@@ -15,13 +15,23 @@ const requiredFiles = [
   '.github/ISSUE_TEMPLATE/work-item.yml',
   '.github/pull_request_template.md',
   'docs/adoption.md',
+  'docs/application-releases.md',
   'docs/ci-performance.md',
+  'docs/vercel-fixed-staging.md',
   'docs/versioning.md',
   'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs',
   'scripts/validate-release-state.mjs',
   'scripts/test-web-ci-contract.mjs',
+  'scripts/test-application-release-contract.mjs',
+  'scripts/test-vercel-fixed-staging-contract.mjs',
+  'scripts/test-vercel-fixed-staging-context.mjs',
   'scripts/test-release-cycle.mjs',
+  'templates/release/release.yml',
+  'templates/vercel/fixed-staging/request-staging.yml',
+  'templates/vercel/fixed-staging/deploy-staging.yml',
+  'templates/vercel/fixed-staging/cleanup-staging.yml',
+  'templates/vercel/fixed-staging/staging-slot.mjs',
   'fixtures/consumer/package.json',
   'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs',
@@ -308,6 +318,8 @@ function validateFoundationCi(workflow, path) {
   requireRunStep(workflow, path, 'validate', 'Validate Foundation contracts', 'npm run foundation:validate');
   requireRunStep(workflow, path, 'validate', 'Run validator regression tests', 'npm run foundation:test');
   requireRunStep(workflow, path, 'validate', 'Run reusable CI contract tests', 'npm run foundation:test:web-ci');
+  requireRunStep(workflow, path, 'validate', 'Run application Release profile contract tests', 'npm run foundation:test:application-release');
+  requireRunStep(workflow, path, 'validate', 'Run fixed Staging profile contract tests', 'npm run foundation:test:vercel-staging');
   requireRunStep(workflow, path, 'validate', 'Exercise release cycle', 'npm run foundation:test:release');
   requireRunStep(workflow, path, 'validate', 'Validate current release metadata', 'npm run foundation:release-validate');
   requireRunStep(workflow, path, 'validate', 'Verify locked Changesets CLI', 'npm run version:tooling');
@@ -319,12 +331,36 @@ function validateFoundationCi(workflow, path) {
 }
 
 const workflowDir = '.github/workflows';
-const workflowPaths = readdirSync(workflowDir)
+const activeWorkflowPaths = readdirSync(workflowDir)
   .filter((name) => /\.ya?ml$/i.test(name))
   .map((name) => `${workflowDir}/${name}`)
   .sort();
 
-if (workflowPaths.length === 0) fail('no GitHub Actions workflows found');
+const templateWorkflowPolicies = new Map([
+  ['templates/release/release.yml', {
+    topLevelContents: 'write',
+    topLevelAllowedWrites: ['contents'],
+    jobAllowedWrites: {},
+  }],
+  ['templates/vercel/fixed-staging/request-staging.yml', {
+    topLevelContents: 'read',
+    topLevelAllowedWrites: [],
+    jobAllowedWrites: {},
+  }],
+  ['templates/vercel/fixed-staging/deploy-staging.yml', {
+    topLevelContents: 'read',
+    topLevelAllowedWrites: [],
+    jobAllowedWrites: { deploy: ['contents', 'issues'] },
+  }],
+  ['templates/vercel/fixed-staging/cleanup-staging.yml', {
+    topLevelContents: 'read',
+    topLevelAllowedWrites: [],
+    jobAllowedWrites: { cleanup: ['contents'] },
+  }],
+]);
+
+const workflowPaths = [...activeWorkflowPaths, ...templateWorkflowPolicies.keys()].sort();
+if (activeWorkflowPaths.length === 0) fail('no GitHub Actions workflows found');
 
 for (const path of workflowPaths) {
   let workflow;
@@ -335,8 +371,16 @@ for (const path of workflowPaths) {
     continue;
   }
 
-  validatePermissions(path, workflow.permissions, 'top-level', { required: true });
-  if (workflow.permissions?.contents !== 'read') fail(`${path} top-level contents permission must be read`);
+  const templatePolicy = templateWorkflowPolicies.get(path);
+  const topLevelAllowedWrites = templatePolicy?.topLevelAllowedWrites ?? [];
+  validatePermissions(path, workflow.permissions, 'top-level', {
+    required: true,
+    allowedWrites: topLevelAllowedWrites,
+  });
+  const expectedTopLevelContents = templatePolicy?.topLevelContents ?? 'read';
+  if (workflow.permissions?.contents !== expectedTopLevelContents) {
+    fail(`${path} top-level contents permission must be ${expectedTopLevelContents}`);
+  }
 
   const jobs = workflow.jobs;
   if (!jobs || typeof jobs !== 'object' || Array.isArray(jobs)) {
@@ -349,7 +393,7 @@ for (const path of workflowPaths) {
       fail(`${path} job ${jobName} must be a mapping`);
       continue;
     }
-    const allowedWrites = [];
+    const allowedWrites = templatePolicy?.jobAllowedWrites?.[jobName] ?? [];
     validatePermissions(path, job.permissions, `job ${jobName}`, { allowedWrites });
     if (job.uses !== undefined) validateUses(path, job.uses, `job ${jobName}`);
 
@@ -360,6 +404,9 @@ for (const path of workflowPaths) {
     if (Array.isArray(job.steps)) {
       for (const [index, step] of job.steps.entries()) {
         if (step?.uses !== undefined) validateUses(path, step.uses, `job ${jobName} step ${index + 1}`);
+        if (step?.['continue-on-error'] !== undefined && step['continue-on-error'] !== false) {
+          fail(`${path} job ${jobName} step ${index + 1} must not continue on error`);
+        }
       }
     }
   }
@@ -393,6 +440,8 @@ for (const script of [
   'tag-version',
   'foundation:release-validate',
   'foundation:test:web-ci',
+  'foundation:test:application-release',
+  'foundation:test:vercel-staging',
   'foundation:test:release',
 ]) {
   if (!pkg.scripts?.[script] || pkg.scripts[script].includes('npx')) {

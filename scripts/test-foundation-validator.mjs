@@ -12,10 +12,17 @@ const files = [
   'package.json', 'package-lock.json', '.changeset/config.json',
   '.github/workflows/web-ci.yml', '.github/workflows/foundation-ci.yml',
   '.github/ISSUE_TEMPLATE/work-item.yml', '.github/pull_request_template.md',
-  'docs/adoption.md', 'docs/ci-performance.md', 'docs/versioning.md',
+  'docs/adoption.md', 'docs/application-releases.md', 'docs/ci-performance.md',
+  'docs/vercel-fixed-staging.md', 'docs/versioning.md',
   'scripts/validate-foundation.mjs', 'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs', 'scripts/validate-release-state.mjs',
-  'scripts/test-web-ci-contract.mjs', 'scripts/test-release-cycle.mjs',
+  'scripts/test-web-ci-contract.mjs', 'scripts/test-application-release-contract.mjs',
+  'scripts/test-vercel-fixed-staging-contract.mjs', 'scripts/test-vercel-fixed-staging-context.mjs',
+  'scripts/test-release-cycle.mjs', 'templates/release/release.yml',
+  'templates/vercel/fixed-staging/request-staging.yml',
+  'templates/vercel/fixed-staging/deploy-staging.yml',
+  'templates/vercel/fixed-staging/cleanup-staging.yml',
+  'templates/vercel/fixed-staging/staging-slot.mjs',
   'fixtures/consumer/package.json', 'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs', 'fixtures/install-proof/package.json',
   'fixtures/install-proof/index.cjs',
@@ -295,6 +302,31 @@ try {
         mutateFirstExternalUses(workflow, (ref) => `${ref.slice(0, ref.lastIndexOf('@'))}@v4`);
       }, 'new workflow mutable action mutation');
       run(dir, false, `all-workflow enumeration from ${version}`);
+    }
+
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, 'templates/release/release.yml', (workflow) => {
+        mutateFirstExternalUses(workflow, (ref) => `${ref.slice(0, ref.lastIndexOf('@'))}@main`);
+      }, 'release template mutable action mutation');
+      run(dir, false, `release template mutable action from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, 'templates/release/release.yml', (workflow) => {
+        setField(workflow.permissions, 'actions', 'write', 'release template permission widening mutation');
+      }, 'release template permission widening mutation');
+      run(dir, false, `release template permission widening from ${version}`);
+    }
+
+    {
+      const dir = makeCopy(version); dirs.push(dir);
+      mutateWorkflow(dir, 'templates/vercel/fixed-staging/deploy-staging.yml', (workflow) => {
+        setField(workflow.jobs.deploy.permissions, 'packages', 'write', 'staging template permission widening mutation');
+      }, 'staging template permission widening mutation');
+      run(dir, false, `staging template permission widening from ${version}`);
     }
   }
 
