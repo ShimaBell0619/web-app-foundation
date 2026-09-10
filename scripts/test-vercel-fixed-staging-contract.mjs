@@ -123,6 +123,18 @@ test('write-enabled publisher is workflow_run-only and trusts main request runs'
     'workflow_run.head_repository.full_name == github.repository',
   ]) assert.ok(condition.includes(marker), `publisher condition missing ${marker}`);
 
+  const validate = findStep(workflow, 'Validate trusted request context');
+  assert.equal(
+    validate.env?.REQUEST_NAME,
+    undefined,
+    'dynamic workflow run-name must not be treated as the static workflow identity',
+  );
+  assert.equal(
+    validate.run.includes('REQUEST_NAME'),
+    false,
+    'publisher must rely on the workflow_run trigger selector for workflow identity',
+  );
+
   const checkout = findStep(workflow, 'Checkout trusted main automation');
   assertPinnedAction(checkout.uses);
   assert.equal(checkout.with.ref, 'main');
