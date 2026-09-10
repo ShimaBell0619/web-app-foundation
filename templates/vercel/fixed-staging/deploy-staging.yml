@@ -38,7 +38,6 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          REQUEST_NAME: ${{ github.event.workflow_run.name }}
           REQUEST_EVENT: ${{ github.event.workflow_run.event }}
           REQUEST_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           REQUEST_BRANCH: ${{ github.event.workflow_run.head_branch }}
@@ -47,7 +46,6 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$EVENT_NAME" == 'workflow_run' ]]
-          [[ "$REQUEST_NAME" == 'Request PR for Fixed Staging' ]]
           [[ "$REQUEST_EVENT" == 'workflow_dispatch' ]]
           [[ "$REQUEST_CONCLUSION" == 'success' ]]
           [[ "$REQUEST_BRANCH" == 'main' ]]
