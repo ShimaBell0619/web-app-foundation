@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 const failures = [];
 const fail = (message) => failures.push(message);
 const read = (path) => readFileSync(path, 'utf8');
+const hasHeading = (text, heading) => text.split(/\r?\n/).some((line) => line.trim() === heading);
 
 const requiredFiles = [
   'docs/ai-implementation.md',
@@ -35,7 +36,7 @@ function parseYamlObject(source, label) {
 
 if (failures.length === 0) {
   const guide = read('docs/ai-implementation.md');
-  const requiredGuideSections = [
+  const requiredGuideHeadings = [
     '# Context-routed AI implementation profile',
     '## Change classification',
     '## Context Routing',
@@ -52,23 +53,23 @@ if (failures.length === 0) {
     '## PR evidence',
   ];
 
-  for (const section of requiredGuideSections) {
-    if (!guide.includes(section)) {
-      fail(`docs/ai-implementation.md missing contract section: ${section}`);
+  for (const heading of requiredGuideHeadings) {
+    if (!hasHeading(guide, heading)) {
+      fail(`docs/ai-implementation.md missing contract heading: ${heading}`);
     }
   }
 
   const agents = read('AGENTS.md');
-  for (const section of ['## Context-routed implementation', '## Context routing', '## Complexity discipline']) {
-    if (!agents.includes(section)) fail(`AGENTS.md missing contract section: ${section}`);
+  for (const heading of ['## Context-routed implementation', '## Context routing', '## Complexity discipline']) {
+    if (!hasHeading(agents, heading)) fail(`AGENTS.md missing contract heading: ${heading}`);
   }
   if (!agents.includes('docs/ai-implementation.md')) {
     fail('AGENTS.md must reference docs/ai-implementation.md');
   }
 
   const adoption = read('docs/adoption.md');
-  if (!adoption.includes('## Context-routed Chat implementation')) {
-    fail('docs/adoption.md missing consumer context-routing section');
+  if (!hasHeading(adoption, '## Context-routed Chat implementation')) {
+    fail('docs/adoption.md missing consumer context-routing heading');
   }
   if (!adoption.includes('docs/ai-implementation.md')) {
     fail('docs/adoption.md must reference docs/ai-implementation.md');
@@ -116,8 +117,8 @@ if (failures.length === 0) {
   }
 
   const pr = read('.github/pull_request_template.md');
-  if (!pr.includes('## Context routing / Design Intent')) {
-    fail('pull_request_template.md missing context-routing evidence section');
+  if (!hasHeading(pr, '## Context routing / Design Intent')) {
+    fail('pull_request_template.md missing context-routing evidence heading');
   }
   for (const field of [
     '- Change classification / affected areas:',
