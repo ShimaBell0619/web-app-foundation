@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Patch Changes
+
+- 5e77830: Refine the context-routed Chat implementation profile to reuse revision-bound evidence and known run identifiers, and to validate missing evidence before changing stable production behavior.
+
 ## 0.7.0
 
 ### Minor Changes
