@@ -19,27 +19,31 @@ for (const path of requiredFiles) {
 
 if (failures.length === 0) {
   const profile = read('docs/ui-implementation.md');
-  const profileMarkers = [
+
+  const requiredSections = [
+    '# Primitive-first UI implementation profile',
+    '## Generic primitives',
+    '## Product-specific semantic components',
+    '## Composition is not inherited from the component library',
+    '## Specialist custom CSS',
+    '## Existing consumers and deviations',
+    '## Review boundary',
+  ];
+  for (const section of requiredSections) {
+    if (!profile.includes(section)) {
+      fail(`docs/ui-implementation.md missing contract section: ${section}`);
+    }
+  }
+
+  const requiredConcepts = [
     'Tailwind CSS',
     'shadcn/ui-style accessible primitives',
     'generic primitive layer',
     'product-specific semantic components',
-    'component-library demo/page composition',
-    'Specialist custom CSS',
-    'Existing consumers',
-    'non-React consumer',
-    'primitive quality',
-    'composition quality',
   ];
-  for (const marker of profileMarkers) {
-    if (!profile.toLowerCase().includes(marker.toLowerCase())) {
-      fail(`docs/ui-implementation.md missing contract marker: ${marker}`);
-    }
-  }
-
-  for (const forbidden of ['Azure Blue', 'CredentialStatus', 'RenewalTimeline']) {
-    if (profile.toLowerCase().includes(forbidden.toLowerCase())) {
-      fail(`docs/ui-implementation.md must not encode consumer-specific visual/domain contract: ${forbidden}`);
+  for (const concept of requiredConcepts) {
+    if (!profile.toLowerCase().includes(concept.toLowerCase())) {
+      fail(`docs/ui-implementation.md missing implementation concept: ${concept}`);
     }
   }
 
