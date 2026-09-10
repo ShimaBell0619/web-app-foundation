@@ -43,6 +43,7 @@ jobs:
           if (!step?.run) throw new Error('bounded transformation step not found');
           fs.writeFileSync('/tmp/apply-issue-53.py', step.run);
           NODE
+          rm .github/workflows/finish-issue-53.yml
           python /tmp/apply-issue-53.py
           npm run foundation:validate
           npm run foundation:test
