@@ -59,9 +59,20 @@ try {
       dir,
       'docs/ai-implementation.md',
       (text) => text.replace('## Context Routing', '## Context discovery'),
-      'routing section',
+      'routing guide section',
     );
-    run(dir, false, 'routing contract removed');
+    run(dir, false, 'routing guide contract removed');
+  }
+
+  {
+    const dir = makeCopy();
+    mutate(
+      dir,
+      'AGENTS.md',
+      (text) => text.replace('## Context routing', '## Document selection'),
+      'repository routing index',
+    );
+    run(dir, false, 'AGENTS loses routing index');
   }
 
   {

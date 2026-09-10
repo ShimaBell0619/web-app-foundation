@@ -9,13 +9,13 @@ The current implementation baseline is React + TypeScript + Vite + npm for brows
 
 ## Document responsibilities and read order
 
-Before changing an application, read:
+Before a material change, establish repository context in this order:
 
-1. `PRODUCT.md` — authoritative product behavior, boundaries, and non-goals.
-2. `DESIGN.md` — authoritative UI/UX and design-system contract for user-facing changes.
-3. `AGENTS.md` — repository-specific engineering and agent rules.
-4. `README.md` — public/user/contributor orientation when the change affects that surface.
-5. Relevant `docs/*` files selected by the repository's Context Routing when the change touches architecture, security, release, compatibility, operations, migration, or another specialist domain.
+1. Read the Issue / approved request and Acceptance Criteria.
+2. Read `PRODUCT.md` — authoritative product behavior, boundaries, and non-goals — when the repository is a product consumer.
+3. Read `AGENTS.md` — repository-specific engineering, routing, and agent rules.
+4. Apply `## Context routing` and load the union of matching contracts. `DESIGN.md` is authoritative and required for product-design/UX, UI-infrastructure, and other material user-facing changes; specialist `docs/*` are loaded when their registered boundary is affected.
+5. Read `README.md` when public/user/contributor orientation or documented usage is affected.
 
 Decision history lives in Issues, PRs, releases, CHANGELOG, and Git history. Current approved behavior belongs in the current contract documents rather than being reconstructed from history.
 
@@ -34,7 +34,23 @@ For material Chat-based implementation, use the operating method in `docs/ai-imp
 - Optimize GitHub I/O around coherent read/write batches, but preserve expected-HEAD checks, non-force updates, conflict reconciliation, security boundaries, and final evidence.
 - Self-review the final diff against the extracted Design Intent as well as code quality and Acceptance Criteria.
 
-A minimal consumer routing index normally maps product design/UX to `DESIGN.md`, domain/data to the repository's domain/architecture contracts, integrations/trust changes to integration and architecture/security contracts, and delivery/operations to the affected deployment/release/staging contract. Register actual repository paths; do not create empty specialist documents only to fill a generic table.
+## Context routing
+
+Derived applications must adapt this index to the normative documents that actually exist in the repository. Do not create empty documents merely to fill a route.
+
+| Change area / condition | Required context in addition to the base route |
+| --- | --- |
+| Product behavior | Product-specific specialist contract when behavior is delegated from `PRODUCT.md` |
+| Product design / UX | `DESIGN.md` |
+| UI infrastructure | `DESIGN.md` plus the adopted UI implementation/review contract |
+| Domain / data | Registered domain and architecture contracts |
+| Integration / trust | Registered integration-specific and architecture/security contracts |
+| Architecture / platform | Registered architecture/compatibility contracts |
+| Delivery / operations | Registered deployment, release, staging, or operations contract for the affected path |
+| Local implementation / refactor | No additional contract unless the actual implementation surface triggers another route |
+| Foundation adoption | Foundation provenance plus target Foundation adoption/change guidance |
+
+Matching routes are additive. The implementation agent may expand the classification after discovery, but must route and load newly affected contracts before writing across the new boundary. Normative specialist documents must be added to, renamed in, or removed from this index when agents depend on the index to discover them.
 
 ## Before changing code
 

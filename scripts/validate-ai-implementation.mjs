@@ -59,7 +59,7 @@ if (failures.length === 0) {
   }
 
   const agents = read('AGENTS.md');
-  for (const section of ['## Context-routed implementation', '## Complexity discipline']) {
+  for (const section of ['## Context-routed implementation', '## Context routing', '## Complexity discipline']) {
     if (!agents.includes(section)) fail(`AGENTS.md missing contract section: ${section}`);
   }
   if (!agents.includes('docs/ai-implementation.md')) {
