@@ -4,7 +4,7 @@ Shared AI-first foundation for web applications developed primarily through Chat
 
 ## Status
 
-Current Foundation version: **0.7.1 (pre-1.0)**.
+Current Foundation version: **0.7.2 (pre-1.0)**.
 This Foundation is intentionally pre-1.0 while its contracts are validated in real applications. React + TypeScript + Vite + npm is the current default implementation baseline, but the core development rules are intentionally framework-tolerant so future Next.js or full-stack applications can adopt the same foundation.
 
 ## Purpose
