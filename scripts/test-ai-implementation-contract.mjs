@@ -58,7 +58,7 @@ try {
     mutate(
       dir,
       'docs/ai-implementation.md',
-      (text) => text.replace('## Context Routing', '## Context discovery'),
+      (text) => text.replace('\n## Context Routing\n', '\n## Context discovery\n'),
       'routing guide section',
     );
     run(dir, false, 'routing guide contract removed');
@@ -69,7 +69,7 @@ try {
     mutate(
       dir,
       'AGENTS.md',
-      (text) => text.replace('## Context routing', '## Document selection'),
+      (text) => text.replace('\n## Context routing\n', '\n## Document selection\n'),
       'repository routing index',
     );
     run(dir, false, 'AGENTS loses routing index');
@@ -80,7 +80,7 @@ try {
     mutate(
       dir,
       'AGENTS.md',
-      (text) => text.replace('## Complexity discipline', '## Implementation preferences'),
+      (text) => text.replace('\n## Complexity discipline\n', '\n## Implementation preferences\n'),
       'complexity discipline',
     );
     run(dir, false, 'anti-overengineering contract removed');
