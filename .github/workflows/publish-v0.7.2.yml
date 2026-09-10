@@ -1,0 +1,39 @@
+name: Publish v0.7.2
+
+on:
+  push:
+    branches:
+      - chore/publish-v0.7.2
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SHA: 976421d0a88e059e60cfb71b86542d27640ae151
+    steps:
+      - name: Verify validated release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(gh api repos/${GITHUB_REPOSITORY}/commits/main --jq .sha)"
+          [[ "$actual" == "$RELEASE_SHA" ]]
+          if gh release view v0.7.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'v0.7.2 already exists' >&2
+            exit 1
+          fi
+      - name: Publish release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          ## Highlights
+
+          - Fix the Fixed Staging publisher so runner-scoped request paths are evaluated at step scope, preventing zero-job workflow validation failures while preserving trusted `workflow_run`, queue ordering, request supersession, and compare-and-swap ref updates.
+          - Harden Foundation release preparation by ignoring `node_modules/` and staging only deliberate generated release metadata instead of broad `git add -A` after dependency installation.
+          EOF
+          gh release create v0.7.2 --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'v0.7.2' --notes-file "$RUNNER_TEMP/release-notes.md"
