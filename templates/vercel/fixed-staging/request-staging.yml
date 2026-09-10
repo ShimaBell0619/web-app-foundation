@@ -1,0 +1,44 @@
+name: Request PR for Fixed Staging
+run-name: Request Fixed Staging for PR #${{ inputs.pr_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Open same-repository PR number to place in the fixed Staging slot'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record fixed Staging request
+        shell: bash
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Invalid PR number: $PR_NUMBER" >&2
+            exit 1
+          fi
+
+          request_dir="${RUNNER_TEMP}/fixed-staging-request"
+          mkdir -p "$request_dir"
+          printf '{"prNumber":%s,"requestRunId":"%s","repository":"%s","ref":"%s"}\n' \
+            "$PR_NUMBER" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_REF" \
+            > "$request_dir/request.json"
+
+      - name: Upload fixed Staging request
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fixed-staging-request
+          path: ${{ runner.temp }}/fixed-staging-request/request.json
+          if-no-files-found: error
+          retention-days: 1

@@ -8,6 +8,7 @@ import {
   deployToStaging,
   newerManualRunExists,
   parsePrNumber,
+  parseStagingRequest,
   shouldCleanupStaging,
   validateDeployablePullRequest,
 } from '../templates/vercel/fixed-staging/staging-slot.mjs';
@@ -81,92 +82,117 @@ function makeClient({
   };
 }
 
-test('deploy workflow keeps privileged execution on trusted main automation', () => {
-  const workflow = readWorkflow('templates/vercel/fixed-staging/deploy-staging.yml');
-
+test('manual request workflow is read-only and emits a bounded request artifact', () => {
+  const workflow = readWorkflow('templates/vercel/fixed-staging/request-staging.yml');
   assert.ok(workflow.on?.workflow_dispatch?.inputs?.pr_number);
   assert.equal(workflow.on.workflow_dispatch.inputs.pr_number.required, true);
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+  assert.equal(workflow.jobs.request.if, "${{ github.ref == 'refs/heads/main' }}");
+  assert.equal(
+    workflow.jobs.request.steps.some((step) => step?.uses?.startsWith('actions/checkout@')),
+    false,
+    'read-only request workflow must not need a source checkout',
+  );
+  const upload = findStep(workflow, 'Upload fixed Staging request');
+  assertPinnedAction(upload.uses);
+  assert.equal(upload.with.name, 'fixed-staging-request');
+  assert.equal(upload.with['retention-days'], 1);
+});
+
+test('write-enabled publisher is workflow_run-only and trusts main request runs', () => {
+  const workflow = readWorkflow('templates/vercel/fixed-staging/deploy-staging.yml');
+  assert.deepEqual(workflow.on?.workflow_run?.workflows, ['Request PR for Fixed Staging']);
+  assert.deepEqual(workflow.on.workflow_run.types, ['completed']);
   assert.deepEqual(workflow.permissions, {
     actions: 'read',
     contents: 'write',
     issues: 'write',
     'pull-requests': 'read',
   });
-
   assert.equal(workflow.concurrency.group, 'fixed-staging-deploy-slot');
   assert.equal(workflow.concurrency['cancel-in-progress'], false);
-  assert.deepEqual(
-    Object.keys(workflow.concurrency).sort(),
-    ['cancel-in-progress', 'group'],
-    'do not rely on unsupported concurrency keys',
-  );
+  assert.equal(workflow.concurrency.queue, 'max');
 
-  assert.equal(workflow.jobs.deploy.if, "${{ github.ref == 'refs/heads/main' }}");
-  assert.equal(workflow.jobs.deploy.env.STAGING_URL, '${{ vars.FIXED_STAGING_URL }}');
-  assert.equal(workflow.jobs.deploy.env.STAGING_WORKFLOW_FILE, 'deploy-staging.yml');
+  const condition = workflow.jobs.deploy.if;
+  for (const marker of [
+    "workflow_run.conclusion == 'success'",
+    "workflow_run.event == 'workflow_dispatch'",
+    "workflow_run.head_branch == 'main'",
+    'workflow_run.head_repository.full_name == github.repository',
+  ]) assert.ok(condition.includes(marker), `publisher condition missing ${marker}`);
 
   const checkout = findStep(workflow, 'Checkout trusted main automation');
   assertPinnedAction(checkout.uses);
   assert.equal(checkout.with.ref, 'main');
   assert.equal(checkout.with['persist-credentials'], true);
 
-  const setupNode = findStep(workflow, 'Set up Node.js');
-  assertPinnedAction(setupNode.uses);
-  assert.equal(setupNode.with['node-version-file'], '.node-version');
+  const download = findStep(workflow, 'Download fixed Staging request');
+  assertPinnedAction(download.uses);
+  assert.equal(download.with.name, 'fixed-staging-request');
+  assert.equal(download.with['run-id'], '${{ github.event.workflow_run.id }}');
+  assert.equal(workflow.jobs.deploy.env.STAGING_REQUEST_WORKFLOW_FILE, 'request-staging.yml');
 
   const move = findStep(workflow, 'Move fixed Staging slot to PR HEAD');
   assert.equal(move.run, 'node scripts/staging-slot.mjs deploy');
 });
 
-test('cleanup workflow is limited to same-repository main PR close events', () => {
+test('cleanup uses trusted pull_request_target context and is not coupled to current base ref', () => {
   const workflow = readWorkflow('templates/vercel/fixed-staging/cleanup-staging.yml');
-
-  assert.deepEqual(workflow.on?.pull_request?.types, ['closed']);
+  assert.deepEqual(workflow.on?.pull_request_target?.types, ['closed']);
   assert.deepEqual(workflow.permissions, { contents: 'write' });
   assert.equal(
     workflow.jobs.cleanup.if,
-    "${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' }}",
+    '${{ github.event.pull_request.head.repo.full_name == github.repository }}',
   );
+  assert.equal(workflow.jobs.cleanup.if.includes('base.ref'), false);
 
   const checkout = findStep(workflow, 'Checkout trusted main automation');
   assertPinnedAction(checkout.uses);
   assert.equal(checkout.with.ref, 'main');
   assert.equal(checkout.with['persist-credentials'], true);
+});
 
-  const setupNode = findStep(workflow, 'Set up Node.js');
-  assertPinnedAction(setupNode.uses);
-
-  const cleanup = findStep(workflow, 'Reset Staging only when it still points to the closed PR');
-  assert.equal(cleanup.run, 'node scripts/staging-slot.mjs cleanup');
+test('request artifact binds PR selection to the triggering main run', () => {
+  const request = JSON.stringify({
+    prNumber: 42,
+    requestRunId: '100',
+    repository: REPOSITORY,
+    ref: 'refs/heads/main',
+  });
+  assert.equal(
+    parseStagingRequest(request, { requestRunId: '100', repository: REPOSITORY }),
+    42,
+  );
+  assert.throws(() => parseStagingRequest(request, { requestRunId: '101', repository: REPOSITORY }));
+  assert.throws(() => parseStagingRequest(request, { requestRunId: '100', repository: 'other/app' }));
+  assert.throws(() => parseStagingRequest(JSON.stringify({ ...JSON.parse(request), ref: 'refs/heads/feature' }), {
+    requestRunId: '100',
+    repository: REPOSITORY,
+  }));
 });
 
 test('PR number and deployable PR validation reject ambiguous or untrusted targets', () => {
   assert.equal(parsePrNumber('42'), 42);
   assert.throws(() => parsePrNumber('0'));
   assert.throws(() => parsePrNumber('42x'));
-
   assert.equal(validateDeployablePullRequest(makePr(), REPOSITORY), SHA_B);
-  assert.throws(() =>
-    validateDeployablePullRequest(makePr({ state: 'closed' }), REPOSITORY),
-  );
-  assert.throws(() =>
-    validateDeployablePullRequest(makePr({ baseRef: 'develop' }), REPOSITORY),
-  );
-  assert.throws(() =>
-    validateDeployablePullRequest(makePr({ headRepo: 'someone/fork' }), REPOSITORY),
-  );
+  assert.throws(() => validateDeployablePullRequest(makePr({ state: 'closed' }), REPOSITORY));
+  assert.throws(() => validateDeployablePullRequest(makePr({ baseRef: 'develop' }), REPOSITORY));
+  assert.throws(() => validateDeployablePullRequest(makePr({ headRepo: 'someone/fork' }), REPOSITORY));
 });
 
-test('newer manual run detection makes an older explicit request yield', () => {
+test('only newer main-branch manual requests supersede an older request', () => {
   assert.equal(
     newerManualRunExists('100', [
-      { id: 99, event: 'workflow_dispatch' },
-      { id: 101, event: 'push' },
+      { id: 101, event: 'workflow_dispatch', head_branch: 'feature' },
+      { id: 102, event: 'push', head_branch: 'main' },
     ]),
     false,
   );
   assert.equal(
-    newerManualRunExists('100', [{ id: 101, event: 'workflow_dispatch' }]),
+    newerManualRunExists('100', [
+      { id: 101, event: 'workflow_dispatch', head_branch: 'main' },
+    ]),
     true,
   );
 });
@@ -189,7 +215,7 @@ test('deploy updates only the staging ref to the validated PR HEAD', async () =>
     client: state.client,
     repository: REPOSITORY,
     prNumber: 42,
-    workflowFile: 'deploy-staging.yml',
+    workflowFile: 'request-staging.yml',
     runId: '100',
     githubRef: 'refs/heads/main',
     runGit(args) {
@@ -203,27 +229,21 @@ test('deploy updates only the staging ref to the validated PR HEAD', async () =>
       return false;
     },
   });
-
-  assert.deepEqual(result, {
-    status: 'deployed',
-    targetSha: SHA_B,
-    alreadyCurrent: false,
-  });
+  assert.deepEqual(result, { status: 'deployed', targetSha: SHA_B, alreadyCurrent: false });
   assert.equal(state.getStaging(), SHA_B);
   assert.equal(gitCalls.some((args) => args[0] === 'checkout'), false);
 });
 
 test('superseded deploy never fetches or mutates Staging', async () => {
   const state = makeClient({
-    manualRuns: [{ id: 101, event: 'workflow_dispatch' }],
+    manualRuns: [{ id: 101, event: 'workflow_dispatch', head_branch: 'main' }],
   });
   let gitCalled = false;
-
   const result = await deployToStaging({
     client: state.client,
     repository: REPOSITORY,
     prNumber: 42,
-    workflowFile: 'deploy-staging.yml',
+    workflowFile: 'request-staging.yml',
     runId: '100',
     githubRef: 'refs/heads/main',
     runGit() {
@@ -231,7 +251,6 @@ test('superseded deploy never fetches or mutates Staging', async () => {
       return true;
     },
   });
-
   assert.equal(result.status, 'superseded');
   assert.equal(gitCalled, false);
   assert.equal(state.getStaging(), SHA_A);
@@ -241,13 +260,12 @@ test('deploy aborts when PR HEAD changes after target resolution', async () => {
   const state = makeClient({
     pullRequests: [makePr({ headSha: SHA_B }), makePr({ headSha: SHA_C })],
   });
-
   await assert.rejects(
     deployToStaging({
       client: state.client,
       repository: REPOSITORY,
       prNumber: 42,
-      workflowFile: 'deploy-staging.yml',
+      workflowFile: 'request-staging.yml',
       runId: '100',
       githubRef: 'refs/heads/main',
       runGit(args) {
@@ -263,7 +281,6 @@ test('deploy aborts when PR HEAD changes after target resolution', async () => {
 test('cleanup does not overwrite a newer Staging occupant', async () => {
   const state = makeClient({ stagingSha: SHA_B });
   let gitCalled = false;
-
   const result = await cleanupStaging({
     client: state.client,
     repository: REPOSITORY,
@@ -275,13 +292,12 @@ test('cleanup does not overwrite a newer Staging occupant', async () => {
       return true;
     },
   });
-
   assert.equal(result.status, 'skipped-newer-staging');
   assert.equal(gitCalled, false);
   assert.equal(state.getStaging(), SHA_B);
 });
 
-test('cleanup uses compare-and-swap semantics before resetting to main', async () => {
+test('cleanup resets matching Staging after a retargeted PR closes', async () => {
   const state = makeClient({ stagingSha: SHA_A, mainSha: SHA_MAIN });
   const result = await cleanupStaging({
     client: state.client,
@@ -299,7 +315,6 @@ test('cleanup uses compare-and-swap semantics before resetting to main', async (
       return false;
     },
   });
-
   assert.deepEqual(result, { status: 'cleaned', mainSha: SHA_MAIN });
   assert.equal(state.getStaging(), SHA_MAIN);
 });
@@ -321,7 +336,6 @@ test('cleanup treats a failed lease caused by a newer occupant as a safe skip', 
       return false;
     },
   });
-
   assert.equal(result.status, 'skipped-race');
   assert.equal(state.getStaging(), SHA_C);
 });

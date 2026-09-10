@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
@@ -27,6 +28,28 @@ export function assertSha(value, name = 'SHA') {
   return normalized;
 }
 
+export function parseStagingRequest(text, { requestRunId, repository }) {
+  let payload;
+  try {
+    payload = JSON.parse(requireValue(text, 'Staging request'));
+  } catch (error) {
+    throw new Error(`Invalid Staging request JSON: ${error instanceof Error ? error.message : error}`);
+  }
+
+  const prNumber = parsePrNumber(payload?.prNumber);
+  const expectedRunId = requireValue(requestRunId, 'STAGING_REQUEST_RUN_ID');
+  if (String(payload?.requestRunId ?? '') !== expectedRunId) {
+    throw new Error('Staging request run ID does not match the triggering workflow run.');
+  }
+  if (payload?.repository !== repository) {
+    throw new Error('Staging request repository does not match GITHUB_REPOSITORY.');
+  }
+  if (payload?.ref !== 'refs/heads/main') {
+    throw new Error('Staging request must originate from main.');
+  }
+  return prNumber;
+}
+
 export function validateDeployablePullRequest(pullRequest, repository) {
   if (pullRequest?.state !== 'open') throw new Error('The requested PR is not open.');
   if (pullRequest?.base?.repo?.full_name !== repository || pullRequest?.base?.ref !== MAIN_BRANCH) {
@@ -39,9 +62,13 @@ export function validateDeployablePullRequest(pullRequest, repository) {
 }
 
 export function newerManualRunExists(currentRunId, workflowRuns) {
-  const current = BigInt(requireValue(currentRunId, 'GITHUB_RUN_ID'));
+  const current = BigInt(requireValue(currentRunId, 'request run ID'));
   return workflowRuns.some((run) => {
-    if (run?.event !== 'workflow_dispatch' || run?.id == null) return false;
+    if (
+      run?.event !== 'workflow_dispatch' ||
+      run?.head_branch !== MAIN_BRANCH ||
+      run?.id == null
+    ) return false;
     try {
       return BigInt(String(run.id)) > current;
     } catch {
@@ -117,7 +144,7 @@ export function createGitHubClient({
     },
     async listManualRuns(workflowFile) {
       const payload = await request(
-        `${repoPath}/actions/workflows/${encodeURIComponent(workflowFile)}/runs?event=workflow_dispatch&per_page=100`,
+        `${repoPath}/actions/workflows/${encodeURIComponent(workflowFile)}/runs?event=workflow_dispatch&branch=${encodeURIComponent(MAIN_BRANCH)}&per_page=100`,
       );
       return Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
     },
@@ -164,7 +191,7 @@ export async function deployToStaging({
   runGit = defaultRunGit,
 }) {
   if (githubRef !== 'refs/heads/main') {
-    throw new Error('Run this workflow from the main branch only.');
+    throw new Error('Privileged Staging publisher must run from main.');
   }
 
   const initialPr = await client.getPullRequest(prNumber);
@@ -185,7 +212,7 @@ export async function deployToStaging({
     const latestSha = validateDeployablePullRequest(latestPr, repository);
     if (latestSha !== targetSha) {
       throw new Error(
-        `PR HEAD changed while preparing Staging: ${targetSha} -> ${latestSha}. Run the workflow again.`,
+        `PR HEAD changed while preparing Staging: ${targetSha} -> ${latestSha}. Run the request again.`,
       );
     }
 
@@ -264,41 +291,51 @@ async function main() {
   });
 
   if (command === 'deploy') {
-    const prNumber = parsePrNumber(process.env.PR_NUMBER);
+    const requestRunId = requireValue(
+      process.env.STAGING_REQUEST_RUN_ID,
+      'STAGING_REQUEST_RUN_ID',
+    );
+    const requestFile = requireValue(
+      process.env.STAGING_REQUEST_FILE,
+      'STAGING_REQUEST_FILE',
+    );
+    const prNumber = parseStagingRequest(readFileSync(requestFile, 'utf8'), {
+      requestRunId,
+      repository,
+    });
     const stagingUrl = requireValue(process.env.STAGING_URL, 'STAGING_URL');
     const workflowFile = requireValue(
-      process.env.STAGING_WORKFLOW_FILE,
-      'STAGING_WORKFLOW_FILE',
+      process.env.STAGING_REQUEST_WORKFLOW_FILE,
+      'STAGING_REQUEST_WORKFLOW_FILE',
     );
-    const runId = requireValue(process.env.GITHUB_RUN_ID, 'GITHUB_RUN_ID');
     const result = await deployToStaging({
       client,
       repository,
       prNumber,
       workflowFile,
-      runId,
+      runId: requestRunId,
       githubRef: process.env.GITHUB_REF,
     });
 
     if (result.status === 'superseded') {
-      console.log(`A newer manual Staging request exists; run ${runId} will not move Staging.`);
+      console.log(`A newer main-branch Staging request exists; request ${requestRunId} will not move Staging.`);
       await writeSummary([
         '## Fixed Staging',
         '',
-        `Run ${runId} was superseded by a newer manual request.`,
-        'No Staging ref change was made by this run.',
+        `Request run ${requestRunId} was superseded by a newer main-branch request.`,
+        'No Staging ref change was made by this publisher run.',
       ]);
       return;
     }
 
-    const runUrl = `${process.env.GITHUB_SERVER_URL}/${repository}/actions/runs/${runId}`;
+    const runUrl = `${process.env.GITHUB_SERVER_URL}/${repository}/actions/runs/${requestRunId}`;
     const comment = [
       'Fixed Staging updated.',
       '',
       `- URL: ${stagingUrl}`,
       `- PR: #${prNumber}`,
       `- SHA: \`${result.targetSha}\``,
-      `- Workflow: ${runUrl}`,
+      `- Request workflow: ${runUrl}`,
       '',
       'This moves only the `staging` branch pointer. The hosting Git Integration performs the actual deployment.',
     ].join('\n');
@@ -319,6 +356,7 @@ async function main() {
       `- PR: #${prNumber}`,
       `- SHA: \`${result.targetSha}\``,
       `- URL: ${stagingUrl}`,
+      `- Request run: ${requestRunId}`,
     ]);
     console.log(`Staging now points to ${result.targetSha}.`);
     return;

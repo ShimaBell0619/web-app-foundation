@@ -1,7 +1,7 @@
 name: Cleanup Fixed Staging
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 permissions:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   cleanup:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' }}
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

@@ -1,12 +1,9 @@
-name: Deploy PR to Fixed Staging
+name: Publish Fixed Staging
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'Open same-repository PR number to place in the fixed Staging slot'
-        required: true
-        type: string
+  workflow_run:
+    workflows: [Request PR for Fixed Staging]
+    types: [completed]
 
 permissions:
   actions: read
@@ -17,19 +14,44 @@ permissions:
 concurrency:
   group: fixed-staging-deploy-slot
   cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'workflow_dispatch' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
-      PR_NUMBER: ${{ inputs.pr_number }}
       STAGING_URL: ${{ vars.FIXED_STAGING_URL }}
-      STAGING_WORKFLOW_FILE: deploy-staging.yml
+      STAGING_REQUEST_RUN_ID: ${{ github.event.workflow_run.id }}
+      STAGING_REQUEST_WORKFLOW_FILE: request-staging.yml
+      STAGING_REQUEST_FILE: ${{ runner.temp }}/fixed-staging-request/request.json
 
     steps:
+      - name: Validate trusted request context
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUEST_NAME: ${{ github.event.workflow_run.name }}
+          REQUEST_EVENT: ${{ github.event.workflow_run.event }}
+          REQUEST_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          REQUEST_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REQUEST_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$EVENT_NAME" == 'workflow_run' ]]
+          [[ "$REQUEST_NAME" == 'Request PR for Fixed Staging' ]]
+          [[ "$REQUEST_EVENT" == 'workflow_dispatch' ]]
+          [[ "$REQUEST_CONCLUSION" == 'success' ]]
+          [[ "$REQUEST_BRANCH" == 'main' ]]
+          [[ "$REQUEST_REPOSITORY" == "$REPOSITORY" ]]
+
       - name: Checkout trusted main automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,6 +63,15 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
+
+      - name: Download fixed Staging request
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: fixed-staging-request
+          path: ${{ runner.temp }}/fixed-staging-request
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Move fixed Staging slot to PR HEAD
         run: node scripts/staging-slot.mjs deploy

@@ -137,22 +137,20 @@ Native Git integration may begin Production deployment before post-merge CI for 
 
 ### Optional fixed Staging slot
 
-When a Vercel consumer needs a stable origin for OAuth or other origin-dependent integration validation, keep normal PR Preview and add the `docs/vercel-fixed-staging.md` profile.
+When a Vercel consumer needs a stable origin for OAuth or other origin-dependent integration validation, keep normal PR Preview and add `docs/vercel-fixed-staging.md`.
 
-Adoption is deliberately explicit:
+Copy all four app-owned files:
 
-- copy `templates/vercel/fixed-staging/deploy-staging.yml` to `.github/workflows/deploy-staging.yml`;
-- copy `templates/vercel/fixed-staging/cleanup-staging.yml` to `.github/workflows/cleanup-staging.yml`;
-- copy `templates/vercel/fixed-staging/staging-slot.mjs` to `scripts/staging-slot.mjs`;
-- create `staging` once from `main`;
-- add repository variable `FIXED_STAGING_URL`;
-- merge the bootstrap automation to `main` before relying on its `workflow_dispatch` action;
-- map a Vercel Branch Domain to `staging`;
-- scope required Vercel Preview configuration to the `staging` branch;
-- register the exact fixed origin with the external provider;
-- manually promote only the PR that actually needs fixed-origin validation.
+- `templates/vercel/fixed-staging/request-staging.yml` -> `.github/workflows/request-staging.yml`;
+- `templates/vercel/fixed-staging/deploy-staging.yml` -> `.github/workflows/deploy-staging.yml`;
+- `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`;
+- `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`.
 
-The slot moves directly to the selected same-repository PR HEAD and uses compare-and-swap cleanup, so `staging` must not become a merge/integration branch. The privileged GitHub workflow runs trusted `main` automation only; the selected PR code executes later under the Vercel Staging Preview environment, which is a separate trust boundary.
+Create `staging` from `main`, add `FIXED_STAGING_URL`, then merge the bootstrap workflows to `main` before using the steady-state path. The manual workflow is read-only; its short-lived request artifact is consumed by a write-enabled `workflow_run` publisher that executes from the trusted default-branch context and independently validates the selected PR.
+
+Map the Vercel Branch Domain to `staging`, scope only the required Preview configuration to that branch, and register the exact fixed origin with the external provider. The selected PR code later executes in that Vercel environment, so Staging configuration is a separate trust boundary from the GitHub publisher.
+
+The slot points directly at the selected same-repository PR HEAD and uses compare-and-swap cleanup. Do not merge feature branches into `staging` or treat it as release history.
 
 ## Optional application GitHub Release flow
 
