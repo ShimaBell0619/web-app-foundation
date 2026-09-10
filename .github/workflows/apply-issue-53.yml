@@ -39,10 +39,8 @@ jobs:
               assert count == 1, f'{label}: expected one match, found {count}'
               return text.replace(old, new, 1)
 
-          # Remove the temporary workflow from the worktree before Foundation validation.
           Path('.github/workflows/apply-issue-53.yml').unlink()
 
-          # Remove all active Pages capability assets.
           for path in [
               '.github/workflows/web-pages-candidate.yml',
               '.github/workflows/web-pages-publish.yml',
@@ -59,27 +57,18 @@ jobs:
               assert p.exists(), f'missing expected Pages asset: {path}'
               p.unlink()
 
-          # package.json: remove only the Pages-specific test entry.
           package_path = Path('package.json')
           package = json.loads(package_path.read_text())
-          removed = package['scripts'].pop('foundation:test:web-pages', None)
-          assert removed is not None, 'foundation:test:web-pages missing'
+          assert package['scripts'].pop('foundation:test:web-pages', None) is not None
           package_path.write_text(json.dumps(package, indent=2) + '\n')
 
-          # Foundation CI: remove Pages contract execution and Pages candidate smoke.
           ci_path = Path('.github/workflows/foundation-ci.yml')
           text = ci_path.read_text()
-          text = replace_once(
-              text,
-              "      - name: Run reusable Pages contract tests\n        run: npm run foundation:test:web-pages\n\n",
-              '',
-              'Foundation CI Pages test step',
-          )
+          text = replace_once(text, "      - name: Run reusable Pages contract tests\n        run: npm run foundation:test:web-pages\n\n", '', 'Foundation CI Pages test step')
           pages_job = """  pages-candidate-smoke:\n    name: Pages candidate smoke\n    needs: validate\n    uses: ./.github/workflows/web-pages-candidate.yml\n    with:\n      working_directory: fixtures/pages-consumer\n      cache_dependency_path: fixtures/pages-consumer/package-lock.json\n      build_command: npm run build:pages\n      output_directory: dist\n      enable_review_images: false\n"""
           text = replace_once(text, pages_job, '', 'Foundation CI Pages smoke job')
           ci_path.write_text(text)
 
-          # Foundation validator: remove Pages files, Pages CI contract, permission exception, and script requirement.
           validator_path = Path('scripts/validate-foundation.mjs')
           text = validator_path.read_text()
           for line in [
@@ -101,78 +90,44 @@ jobs:
           text = replace_once(text, pages_permissions, "    const allowedWrites = [];\n", 'validator Pages write exception')
           validator_path.write_text(text)
 
-          # Validator regression fixture: remove Pages fixture files and Pages-specific mutation.
           regression_path = Path('scripts/test-foundation-validator.mjs')
           text = regression_path.read_text()
-          replacements = [
+          for old, new in [
               ("  '.github/workflows/web-ci.yml', '.github/workflows/web-pages-candidate.yml',\n  '.github/workflows/web-pages-publish.yml', '.github/workflows/foundation-ci.yml',\n", "  '.github/workflows/web-ci.yml', '.github/workflows/foundation-ci.yml',\n"),
               ("  'docs/adoption.md', 'docs/ci-performance.md', 'docs/pages.md', 'docs/versioning.md',\n", "  'docs/adoption.md', 'docs/ci-performance.md', 'docs/versioning.md',\n"),
               ("  'scripts/test-web-ci-contract.mjs', 'scripts/test-web-pages-contract.mjs',\n  'scripts/test-release-cycle.mjs', 'templates/github-pages/capture-pr-preview.mjs',\n  'fixtures/pages-consumer/package.json', 'fixtures/pages-consumer/package-lock.json',\n  'fixtures/pages-consumer/scripts/build.mjs',\n", "  'scripts/test-web-ci-contract.mjs', 'scripts/test-release-cycle.mjs',\n"),
-          ]
-          for old, new in replacements:
+          ]:
               text = replace_once(text, old, new, 'validator fixture list cleanup')
           mutation = """\n    {\n      const dir = makeCopy(version); dirs.push(dir);\n      mutateWorkflow(dir, '.github/workflows/web-pages-publish.yml', (workflow) => {\n        setField(workflow.jobs.publish.permissions, 'packages', 'write', 'publisher unexpected write permission mutation');\n      }, 'publisher unexpected write permission mutation');\n      run(dir, false, `publisher unexpected write permission from ${version}`);\n    }\n"""
           text = replace_once(text, mutation, '', 'Pages publisher mutation')
           regression_path.write_text(text)
 
-          # README: replace active hosting capability sections, retaining historical CHANGELOG only.
           readme_path = Path('README.md')
           text = readme_path.read_text()
           start = text.index('## Optional operational profiles\n')
           end = text.index('## Versioning\n', start)
           replacement = """## Default hosting profile\n\nVercel Git Integration is the default hosting/deployment profile for new web-app consumers. Foundation CI remains the quality gate; Vercel owns branch/PR Preview and Production deployment. Do not add a redundant custom Vercel deployment Action merely to duplicate native Git Integration behavior.\n\nFor applications under one owner-managed domain, use a stable naming convention when practical:\n\n- Production: `<app>.<domain>`\n- Fixed Staging, when needed: `staging.<app>.<domain>`\n- ordinary ephemeral PR Preview: Vercel-provided Preview URL\n\nUse a fixed Staging domain only when an exact/stable origin is materially required, such as OAuth allowlisting. Do not create per-PR custom-domain automation by default.\n\nSee `docs/vercel.md` for the hosting contract and `docs/vercel-fixed-staging.md` for the optional fixed-origin Staging slot.\n\n## Operational profiles\n\n- `docs/vercel.md` — default Vercel native Git-integrated Preview/Production hosting profile; no redundant deployment Action.\n- `docs/vercel-fixed-staging.md` — optional fixed-origin, single-PR Staging slot layered on Vercel Git Integration for OAuth/origin-dependent validation.\n- `docs/application-releases.md` — optional application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.\n- `docs/azure-oidc.md` — optional GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.\n\nA consumer may document a justified hosting deviation when product or platform requirements demand it, but the Foundation keeps one default hosting path rather than maintaining parallel deployment capabilities without current evidence.\n\n"""
           text = text[:start] + replacement + text[end:]
-          text = replace_once(
-              text,
-              'The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Deployment providers remain application decisions. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.',
-              'The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.',
-              'README CI boundary',
-          )
-          text = replace_once(
-              text,
-              '`docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`',
-              '`docs/ci-performance.md`, `docs/vercel.md`',
-              'README references',
-          )
+          text = replace_once(text, 'The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Deployment providers remain application decisions. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.', 'The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.', 'README CI boundary')
+          text = replace_once(text, '`docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`', '`docs/ci-performance.md`, `docs/vercel.md`', 'README references')
           readme_path.write_text(text)
 
-          # Adoption: remove Pages adoption flow and make Vercel the default hosting path.
           adoption_path = Path('docs/adoption.md')
           text = adoption_path.read_text()
-          old_step = '10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically. If a Vercel consumer also needs one stable Preview origin, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview.\n'
-          new_step = '10. Use Vercel Git Integration as the default hosting/deployment path for new consumers. Configure an owner-managed Production custom domain when available; if one stable Preview origin is required, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview. Document a different hosting choice only when product or platform requirements justify it.\n'
-          text = replace_once(text, old_step, new_step, 'adoption bootstrap hosting')
+          text = replace_once(text, '10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically. If a Vercel consumer also needs one stable Preview origin, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview.\n', '10. Use Vercel Git Integration as the default hosting/deployment path for new consumers. Configure an owner-managed Production custom domain when available; if one stable Preview origin is required, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview. Document a different hosting choice only when product or platform requirements justify it.\n', 'adoption bootstrap hosting')
           text = replace_once(text, '\nFor GitHub Pages specifically, complete **Pages Phase 0** before the first preview-enabled application/UI PR, then complete **Pages Phase 1** as documented below.\n', '\n', 'adoption Pages bootstrap note')
           start = text.index('## Optional GitHub Pages previews\n')
           end = text.index('## Optional Vercel Git integration\n', start)
           text = text[:start] + text[end:]
           text = replace_once(text, '## Optional Vercel Git integration\n', '## Default Vercel Git integration\n', 'adoption Vercel heading')
-          vercel_marker = '- connect/import the repository in Vercel;\n- keep the Foundation CI caller as the quality gate;\n'
-          vercel_replacement = '- connect/import the repository in Vercel;\n- keep the Foundation CI caller as the quality gate;\n- use an owner-managed stable Production domain when available, normally `<app>.<domain>`;\n- use `staging.<app>.<domain>` for Fixed Staging when a stable origin is required; keep ordinary PR previews on Vercel-provided Preview URLs;\n'
-          text = replace_once(text, vercel_marker, vercel_replacement, 'adoption Vercel domain convention')
-          text = replace_once(
-              text,
-              'The Foundation does not select a deployment provider, but derived apps should preserve these provider-independent rules:',
-              'Vercel Git Integration is the Foundation default hosting profile. Consumers with a justified alternative should still preserve these provider-independent rules:',
-              'adoption deployment safety intro',
-          )
+          text = replace_once(text, '- connect/import the repository in Vercel;\n- keep the Foundation CI caller as the quality gate;\n', '- connect/import the repository in Vercel;\n- keep the Foundation CI caller as the quality gate;\n- use an owner-managed stable Production domain when available, normally `<app>.<domain>`;\n- use `staging.<app>.<domain>` for Fixed Staging when a stable origin is required; keep ordinary PR previews on Vercel-provided Preview URLs;\n', 'adoption Vercel domain convention')
+          text = replace_once(text, 'The Foundation does not select a deployment provider, but derived apps should preserve these provider-independent rules:', 'Vercel Git Integration is the Foundation default hosting profile. Consumers with a justified alternative should still preserve these provider-independent rules:', 'adoption deployment safety intro')
           adoption_path.write_text(text)
 
-          # Vercel guide: promote it from optional to default and define the generic domain convention.
           vercel_path = Path('docs/vercel.md')
           text = vercel_path.read_text()
-          text = replace_once(
-              text,
-              'Vercel is an optional application-owned hosting profile. It does not replace the reusable Foundation quality CI contract.\n\nUse this profile when the application benefits from native Git integration, automatic Preview deployments, and a Production deployment from the configured production branch without maintaining a custom deployment GitHub Action.',
-              'Vercel Git Integration is the default application-owned hosting profile for new Web App Foundation consumers. It does not replace the reusable Foundation quality CI contract.\n\nUse the native Git integration for automatic Preview deployments and Production deployment from the configured production branch without maintaining a custom deployment GitHub Action. A consumer may document a different hosting choice when product or platform requirements justify it, but the Foundation does not maintain parallel deployment capabilities merely for optionality.',
-              'Vercel profile default',
-          )
-          text = replace_once(
-              text,
-              '6. Verify one PR Preview and one Production deployment before treating the profile as adopted.',
-              '6. Configure the canonical Production custom domain under an owner-managed domain when available.\n7. Verify one PR Preview and one Production deployment before treating the profile as adopted.',
-              'Vercel adoption custom domain',
-          )
+          text = replace_once(text, 'Vercel is an optional application-owned hosting profile. It does not replace the reusable Foundation quality CI contract.\n\nUse this profile when the application benefits from native Git integration, automatic Preview deployments, and a Production deployment from the configured production branch without maintaining a custom deployment GitHub Action.', 'Vercel Git Integration is the default application-owned hosting profile for new Web App Foundation consumers. It does not replace the reusable Foundation quality CI contract.\n\nUse the native Git integration for automatic Preview deployments and Production deployment from the configured production branch without maintaining a custom deployment GitHub Action. A consumer may document a different hosting choice when product or platform requirements justify it, but the Foundation does not maintain parallel deployment capabilities merely for optionality.', 'Vercel profile default')
+          text = replace_once(text, '6. Verify one PR Preview and one Production deployment before treating the profile as adopted.', '6. Configure the canonical Production custom domain under an owner-managed domain when available.\n7. Verify one PR Preview and one Production deployment before treating the profile as adopted.', 'Vercel adoption custom domain')
           start = text.index('## Custom domains\n')
           end = text.index('## Proven consumer evidence\n', start)
           custom = """## Custom-domain convention\n\nFor applications managed under one owner-controlled domain, use this convention when practical:\n\n- Production: `<app>.<domain>`\n- Fixed Staging: `staging.<app>.<domain>`\n- Ephemeral PR Preview: the Vercel-provided Preview URL\n\nThe concrete domain remains owner/application configuration. Record the canonical Production and Fixed Staging URLs in the consuming application's README/deployment documentation and revalidate them after DNS/domain changes.\n\nDo not allocate custom domains for every PR by default. Ephemeral Preview URLs already provide that lifecycle; a stable custom Staging origin exists specifically for integrations or review flows that require a fixed origin.\n\nVercel/DNS/OAuth allowlists remain external setup. The Foundation fixed-Staging profile owns only the trusted GitHub ref-selection contract.\n\n"""
@@ -181,11 +136,9 @@ jobs:
           text = replace_once(text, 'This consumer evidence is the basis for these optional Vercel profiles; GitHub Pages remains a separate supported optional capability.', 'This real-consumer evidence is the basis for Vercel Git Integration as the Foundation default hosting profile.', 'Vercel final evidence')
           vercel_path.write_text(text)
 
-          # Record the intentional breaking pre-1.0 change.
           changeset = Path('.changeset/calm-pages-retire.md')
           changeset.write_text('''---\n"web-app-foundation": minor\n---\n\nBREAKING: retire the GitHub Pages deployment and PR-preview capability and make Vercel Git Integration the default hosting profile for new consumers. Use owner-managed stable domains for Production and Fixed Staging while keeping ordinary PR previews on Vercel-provided Preview URLs by default.\n''')
 
-          # The active repository must contain no Pages-capability references outside release history and this pending Changeset.
           forbidden = ['web-pages', 'github-pages', 'docs/pages.md', 'pages-consumer', 'foundation:test:web-pages', 'Pages candidate', 'GitHub Pages']
           allowed = {Path('CHANGELOG.md'), changeset}
           offenders = []
@@ -221,26 +174,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add \
-            package.json \
-            .github/workflows/foundation-ci.yml \
-            scripts/validate-foundation.mjs \
-            scripts/test-foundation-validator.mjs \
-            README.md \
-            docs/adoption.md \
-            docs/vercel.md \
-            .changeset/calm-pages-retire.md
+          git add -u
+          git add .changeset/calm-pages-retire.md
 
-          git add -u -- \
-            .github/workflows/apply-issue-53.yml \
-            .github/workflows/web-pages-candidate.yml \
-            .github/workflows/web-pages-publish.yml \
-            docs/pages.md \
-            fixtures/pages-consumer \
-            scripts/test-pages-bootstrap-contract.mjs \
-            scripts/test-web-pages-contract.mjs \
-            templates/github-pages
+          python - <<'PY'
+          import subprocess
+          expected = {
+              '.changeset/calm-pages-retire.md',
+              '.github/workflows/apply-issue-53.yml',
+              '.github/workflows/foundation-ci.yml',
+              '.github/workflows/web-pages-candidate.yml',
+              '.github/workflows/web-pages-publish.yml',
+              'README.md',
+              'docs/adoption.md',
+              'docs/pages.md',
+              'docs/vercel.md',
+              'fixtures/pages-consumer/package-lock.json',
+              'fixtures/pages-consumer/package.json',
+              'fixtures/pages-consumer/scripts/build.mjs',
+              'package.json',
+              'scripts/test-foundation-validator.mjs',
+              'scripts/test-pages-bootstrap-contract.mjs',
+              'scripts/test-web-pages-contract.mjs',
+              'scripts/validate-foundation.mjs',
+              'templates/github-pages/capture-pr-preview.mjs',
+              'templates/github-pages/pages-publish.yml',
+          }
+          actual = set(subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).splitlines())
+          assert actual == expected, f'unexpected staged paths:\nexpected={sorted(expected)}\nactual={sorted(actual)}'
+          PY
 
-          git diff --cached --check
           git commit -m "refactor!: retire GitHub Pages capability"
           git push origin HEAD:feat/issue-53-retire-pages
