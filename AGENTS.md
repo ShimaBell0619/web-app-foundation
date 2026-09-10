@@ -30,7 +30,8 @@ For material Chat-based implementation, use the operating method in `docs/ai-imp
 - Build a session-local Repository Context Packet from the Issue/Acceptance Criteria, base SHA, routed contracts, relevant implementation/tests, and current Foundation provenance. The packet is working context, not a repository source of truth and not a permanent `CONTEXT.md`.
 - Extract change-specific Design Intent before implementation: requested delta, must preserve, may change, must not change, responsibility/trust boundaries, validation requirements, and explicit non-goals.
 - Build an Implementation Map from contract/Acceptance Criterion -> implementation surface -> validation evidence before writes. Expand routing and the packet when scope crosses a new material boundary.
-- Use Bootstrap Read once for a new Issue and Incremental Read for later corrections. Do not repeatedly fetch unchanged contracts merely to recreate context.
+- Use Bootstrap Read once for a new Issue and Incremental Read for later corrections. Do not repeatedly fetch unchanged contracts merely to recreate context. Reuse revision-bound evidence and known resource/run identifiers while they remain valid; refresh mutable state when freshness or staleness requires it.
+- When an Acceptance Criterion expects existing behavior to be preserved but proof is missing, add or run the smallest focused validation before changing stable production code when practical; missing evidence is not itself a defect.
 - Optimize GitHub I/O around coherent read/write batches, but preserve expected-HEAD checks, non-force updates, conflict reconciliation, security boundaries, and final evidence.
 - Self-review the final diff against the extracted Design Intent as well as code quality and Acceptance Criteria.
 

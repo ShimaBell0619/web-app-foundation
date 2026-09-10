@@ -130,6 +130,10 @@ Validation / review profile
 - rendered checks when applicable
 - independent-review risk decision
 
+Observed evidence
+- resource/revision/run identifiers already observed and useful for reuse
+- validation results tied to a specific reviewed SHA when applicable
+
 State
 - unresolved conflicts / approvals
 - rerouting triggers
@@ -137,6 +141,8 @@ State
 ```
 
 The packet should reference source paths/sections rather than copy large blocks of contract prose. Do not commit the packet as `CONTEXT.md`, paste it wholesale into an Issue, or treat chat memory as authoritative when it conflicts with the repository revision recorded in the packet.
+
+Retain only enough observed evidence to avoid rediscovering resources that are already identified for this session. This is not a persistent cache: the observation remains useful only while its revision or resource identity still supports the current decision.
 
 ## Design Intent extraction
 
@@ -225,6 +231,10 @@ Incremental Read should normally focus on:
 - newly affected contracts/routes;
 - external documentation only when a material version/runtime/API uncertainty has appeared.
 
+Reuse observations that are explicitly bound to an unchanged revision or stable resource identity instead of repeating broad discovery. For example, a file already fetched at the recorded commit SHA does not need to be fetched again merely to reconfirm the same content.
+
+Mutable current state is different: refresh it when the answer depends on its current value, when a write may have changed it, or when an existing staleness/rerouting trigger applies. Once a workflow run or job ID is known, poll that known resource directly rather than repeatedly rediscovering it from a broad run listing unless discovery itself must be refreshed.
+
 If the base branch advances, compare the original base with the new base. Refresh the packet when the drift changes a routed contract, implementation surface, relevant test, dependency/runtime assumption, or conflict-sensitive file. Do not invalidate the entire packet only because an unrelated commit landed.
 
 Before updating a branch ref, verify the observed branch HEAD is still the expected parent. Use non-force/fast-forward updates by default and reconcile unexpected movement rather than overwriting newer work.
@@ -244,6 +254,8 @@ routed contract batch
         ↓
 implementation + test batch
 ```
+
+When discovery returns a stable identifier or revision-bound resource, retain and reuse it for subsequent direct reads or polling. Do not rerun repository-wide search/list operations only to recover an identifier already known to the current packet.
 
 Preferred write pattern for a coherent multi-file change when Git data operations are available:
 
@@ -283,6 +295,8 @@ final relevant validation
 
 Do not run the entire CI suite after every tiny edit. Conversely, do not defer all validation until a large unreviewable change has accumulated. The coherent candidate defined by the Implementation Map is the normal validation boundary.
 
+When an Acceptance Criterion says existing behavior must be preserved but the Implementation Map reveals that proof is missing, distinguish an evidence gap from a known defect. When practical, add or run the smallest focused validation that can tell those states apart before altering stable production code. If the evidence passes, leave the production path unchanged; if it fails, correct the behavior and revalidate normally. This rule does not apply when the requested change itself requires new production behavior.
+
 User-facing UI work retains the existing `render -> critique -> fix -> re-render` loop from `docs/ui-review.md`. Render coherent UI batches at relevant desktop/mobile/narrow boundaries instead of taking a new Preview after every small CSS edit.
 
 ## Self-review against Design Intent
@@ -292,6 +306,7 @@ The mandatory Foundation self-review remains in force. For a context-routed chan
 The review must answer, where applicable:
 
 - Does every Acceptance Criterion have implementation and evidence?
+- Is an apparent finding actually only missing evidence for behavior expected to be preserved, and if so was focused validation used before changing stable production code?
 - Does the final diff preserve each `must preserve` constraint?
 - Did anything listed under `must not change` change directly or indirectly?
 - Did responsibility or trust boundaries move without an approved decision?
@@ -326,6 +341,7 @@ Do not paste the complete Repository Context Packet into the PR.
 This profile deliberately does not introduce:
 
 - a permanent `CONTEXT.md`;
+- a persistent cross-session fetch cache or evidence store;
 - a vector database, context service, prompt registry, or runtime agent framework;
 - a Foundation-wide hard-coded list of every possible consumer specialist document;
 - a requirement to read every Markdown file for every Issue;
