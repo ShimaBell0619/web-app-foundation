@@ -14,12 +14,27 @@ Before changing an application, read:
 1. `PRODUCT.md` — authoritative product behavior, boundaries, and non-goals.
 2. `DESIGN.md` — authoritative UI/UX and design-system contract for user-facing changes.
 3. `AGENTS.md` — repository-specific engineering and agent rules.
-4. `README.md` — public/user/contributor orientation.
-5. Relevant `docs/*` files when the change touches architecture, security, release, compatibility, operations, migration, or another specialist domain.
+4. `README.md` — public/user/contributor orientation when the change affects that surface.
+5. Relevant `docs/*` files selected by the repository's Context Routing when the change touches architecture, security, release, compatibility, operations, migration, or another specialist domain.
 
 Decision history lives in Issues, PRs, releases, CHANGELOG, and Git history. Current approved behavior belongs in the current contract documents rather than being reconstructed from history.
 
 Do not duplicate the same normative rule across several files unless the duplication is deliberately summarized and one source is clearly authoritative.
+
+## Context-routed implementation
+
+For material Chat-based implementation, use the operating method in `docs/ai-implementation.md` before the first implementation write.
+
+- Classify the change by affected area, then load the base contracts plus the union of matching specialist routes.
+- Keep a small `## Context routing` index in the adopting repository's `AGENTS.md`. Register normative specialist documents there when they are created, renamed, or retired so future agents can discover them deterministically.
+- Build a session-local Repository Context Packet from the Issue/Acceptance Criteria, base SHA, routed contracts, relevant implementation/tests, and current Foundation provenance. The packet is working context, not a repository source of truth and not a permanent `CONTEXT.md`.
+- Extract change-specific Design Intent before implementation: requested delta, must preserve, may change, must not change, responsibility/trust boundaries, validation requirements, and explicit non-goals.
+- Build an Implementation Map from contract/Acceptance Criterion -> implementation surface -> validation evidence before writes. Expand routing and the packet when scope crosses a new material boundary.
+- Use Bootstrap Read once for a new Issue and Incremental Read for later corrections. Do not repeatedly fetch unchanged contracts merely to recreate context.
+- Optimize GitHub I/O around coherent read/write batches, but preserve expected-HEAD checks, non-force updates, conflict reconciliation, security boundaries, and final evidence.
+- Self-review the final diff against the extracted Design Intent as well as code quality and Acceptance Criteria.
+
+A minimal consumer routing index normally maps product design/UX to `DESIGN.md`, domain/data to the repository's domain/architecture contracts, integrations/trust changes to integration and architecture/security contracts, and delivery/operations to the affected deployment/release/staging contract. Register actual repository paths; do not create empty specialist documents only to fill a generic table.
 
 ## Before changing code
 
@@ -69,7 +84,7 @@ For every material change:
 5. **Final validation** — run the relevant checks from a clean/reproducible state where practical.
 6. **Completion report** — state what changed, acceptance-criteria evidence, reviewed commit/SHA or diff scope, review findings/corrections, validation results, independent-review decision/evidence when applicable, and remaining risk.
 
-Self-review should consider, where relevant: acceptance criteria and product-contract fit; regressions and edge cases; security/privacy boundaries; error/failure behavior; state lifecycle and cleanup; accessibility and focus behavior; responsive/rendered UI; performance hot paths; maintainability and unnecessary abstraction; dependency/supply-chain impact; and whether tests validate behavior rather than implementation trivia.
+Self-review should consider, where relevant: acceptance criteria and product-contract fit; extracted Design Intent; regressions and edge cases; security/privacy boundaries; error/failure behavior; state lifecycle and cleanup; accessibility and focus behavior; responsive/rendered UI; performance hot paths; maintainability and unnecessary abstraction; dependency/supply-chain impact; and whether tests validate behavior rather than implementation trivia.
 
 Do not make meaningless code changes merely to prove that a review occurred. If the review finds no material correction, report that fact and the evidence checked.
 
@@ -122,6 +137,19 @@ Do not report formatting, naming taste, style preference, or routine lint/type i
 - Keep server/client boundaries explicit in SSR/full-stack frameworks; never assume browser-only security properties protect server-side resources.
 - Treat persistent storage, authentication, external APIs, file handling, cross-origin communication, and privileged server code as explicit trust boundaries.
 - Avoid premature microservices, monorepo complexity, state-management libraries, or generic component wrappers without measured need.
+
+## Complexity discipline
+
+Overengineering is not an acceptable form of future-proofing. Add only the complexity required by the current approved objective.
+
+- Do not introduce a new abstraction, layer, dependency, service, configuration format, generated framework, workflow, permanent document, compatibility adapter, or extension point solely for hypothetical future reuse, stylistic purity, or conformity with a newer standard.
+- Additional complexity must be justified by a current Acceptance Criterion/product requirement, a real responsibility/lifecycle/security/trust/compatibility boundary, observed repetition, measured operational/performance evidence, or an already-adopted Foundation contract.
+- Even when justified, prefer the least powerful mechanism that solves the current problem. A direct local implementation is preferable to a generic framework when both satisfy the same contract.
+- Do not replace stable consumer code solely because a newer Foundation default exists. Migration must have an objective benefit and an explicit bounded scope.
+- During self-review, remove speculative flexibility, unused extension points, duplicate configuration, unnecessary indirection, and abstractions that merely rename another API.
+- Do not simplify away complexity that correctness actually requires: security boundaries, failure recovery, concurrency safety, data migration/integrity, accessibility, and validation remain mandatory where applicable.
+
+See `docs/ai-implementation.md` for how this discipline is applied during Design Intent extraction, Implementation Mapping, batching, and self-review.
 
 ## Web and UI baseline
 
@@ -188,5 +216,6 @@ Deployment provider configuration is application-specific. Any automated publish
 - Update `DESIGN.md` when approved UI/UX or design-system decisions change.
 - Update `AGENTS.md` only when repeatable engineering/agent behavior changes.
 - Create or update a specialist `docs/*` file when a technical topic becomes too detailed for the core contracts.
+- When a normative specialist document is created, renamed, or retired, update the repository's Context Routing in the same change when agents depend on that document for implementation decisions.
 - Avoid broad refactors while implementing an unrelated Issue.
 - Do not silently expand product scope.

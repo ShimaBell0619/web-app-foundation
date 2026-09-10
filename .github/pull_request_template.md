@@ -14,6 +14,16 @@ Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR 
 | --- | --- |
 |  |  |
 
+## Context routing / Design Intent
+
+Keep this compact. The session-local Repository Context Packet is not a PR artifact.
+
+- Change classification / affected areas:
+- Routed repository contracts:
+- Scope expansion / rerouting: none / describe
+- Design Intent — must preserve / must not change:
+- Overengineering check — added abstraction/dependency/layer/process justified by current need, or none:
+
 ## Contract impact
 
 - PRODUCT.md: none / updated
@@ -33,6 +43,7 @@ Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR 
 ## AI self-review
 
 - Reviewed commit/SHA or final diff scope:
+- Design Intent / contract-fit result:
 - Review finding(s):
 - Correction/hardening applied:
 - Re-review result:

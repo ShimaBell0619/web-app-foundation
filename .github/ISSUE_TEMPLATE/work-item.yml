@@ -26,11 +26,43 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: areas
+    attributes:
+      label: Affected areas
+      description: Select the areas known when opening the Issue. The implementation agent may add routes if discovery expands the scope.
+      multiple: true
+      options:
+        - Product behavior
+        - Product design / UX
+        - UI infrastructure
+        - Domain / data
+        - Integration / trust
+        - Architecture / platform
+        - Delivery / operations
+        - Local implementation / refactor
+    validations:
+      required: false
+
   - type: textarea
     id: context
     attributes:
-      label: Context and constraints
-      description: Existing contracts, boundaries, dependencies, or non-goals relevant to the work.
+      label: Contract pointers and Issue-specific constraints
+      description: Point to unusual relevant contracts or state Issue-specific constraints. Do not copy repository contract documents into the Issue.
+      placeholder: |
+        - docs/ARCHITECTURE.md — affected boundary
+        - Existing behavior that must remain unchanged
+    validations:
+      required: false
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Explicit non-goals
+      description: Adjacent work that must not be pulled into this Issue. Leave blank when the scope is already unambiguous.
+      placeholder: |
+        - Do not redesign ...
+        - Do not migrate ... solely for conformity
     validations:
       required: false
 
