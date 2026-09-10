@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+### Patch Changes
+
+- 11de43b: Harden Fixed Staging publisher runner-context scoping and Foundation release-preparation hygiene from real consumer evidence.
+
 ## 0.7.1
 
 ### Patch Changes
