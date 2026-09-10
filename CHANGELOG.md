@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- 6946a5c: Add a proven optional Vercel fixed-Staging profile for exact-origin integration testing, with a read-only manual request, trusted default-branch publisher, compare-and-swap ref updates, conditional cleanup, copyable templates, and regression coverage.
+
+- 29e7273: Add a selective Codex GitHub Code Review operating model that separates mandatory implementation-agent self-review from manual, risk-based independent review on merge-candidate PR heads, with consumer guidance, PR evidence fields, and repository contract validation.
+
 ## 0.4.1
 
 ### Patch Changes
