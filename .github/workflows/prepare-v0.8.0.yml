@@ -1,0 +1,70 @@
+name: Prepare v0.8.0
+
+on:
+  push:
+    branches:
+      - chore/release-v0.8.0
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chore/release-v0.8.0
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Generate and validate release state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run version-packages
+          node -e "const p=require('./package.json'); if(p.version!=='0.8.0') throw new Error('expected 0.8.0, got '+p.version)"
+          rm .github/workflows/prepare-v0.8.0.yml
+          npm ci
+          npm run foundation:validate
+          npm run foundation:test
+          npm run foundation:test:web-ci
+          npm run foundation:test:vercel-staging
+          npm run foundation:test:release
+          npm run foundation:release-validate
+
+      - name: Commit explicit release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          git restore --source=HEAD -- .github/workflows
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json README.md AGENTS.md CHANGELOG.md
+          git add -u -- .changeset/calm-pages-retire.md
+          python - <<'PY'
+          import subprocess
+          expected = {
+              '.changeset/calm-pages-retire.md',
+              'AGENTS.md',
+              'CHANGELOG.md',
+              'README.md',
+              'package-lock.json',
+              'package.json',
+          }
+          actual = set(subprocess.check_output(['git','diff','--cached','--name-only'], text=True).splitlines())
+          assert actual == expected, f'unexpected release files: {sorted(actual)}'
+          PY
+          git commit -m "chore: prepare v0.8.0 release state"
+          git push origin HEAD:chore/release-v0.8.0
