@@ -31,10 +31,13 @@ jobs:
           start = source.index(marker) + len(marker)
           script_lines = []
           for line in source[start:].splitlines():
+              if not line.strip():
+                  script_lines.append('')
+                  continue
               if line.startswith('          '):
                   script_lines.append(line[10:])
-              else:
-                  break
+                  continue
+              break
           script = '\n'.join(script_lines) + '\n'
           old = "text.replace('Tailwind CSS', 'utility framework')"
           new = "text.replaceAll('Tailwind CSS', 'utility framework')"
