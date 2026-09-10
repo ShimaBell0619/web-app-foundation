@@ -40,15 +40,23 @@ Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR 
 
 ## Independent review
 
-- [ ] Not required for this risk level
-- [ ] Required and completed for auth/privilege, destructive migration, release/publish, privileged workflow, or reusable Foundation workflow changes
-- [ ] Required but unavailable; document the reason, alternative validation, and residual risk below
+Independent review is separate from the implementation agent's self-review. Use `docs/independent-review.md` for the operating policy. Every Codex invocation, including re-review, requires a concrete rationale and explicit user/maintainer approval before `@codex review` is posted.
 
-If required review could not be completed:
+- [ ] Not requested because this is low risk; reason recorded below
+- [ ] Codex review proposed; rationale presented and explicit approval obtained before `@codex review`
+- [ ] Completed by another independent human/agent reviewer
+- [ ] Recommended/required for the risk level but unavailable or not approved; residual risk recorded below
 
-- Reason unavailable:
-- Alternative validation performed:
-- Residual risk / merge decision owner:
+- Review decision / risk rationale:
+- Affected risk category / expected review value:
+- Codex invocation approval: not applicable / explicitly obtained
+- Merge-candidate SHA reviewed:
+- Material finding(s) and disposition:
+- Re-review rationale when applicable:
+- Re-review approval: not applicable / explicitly obtained
+- Re-review decision: not needed / requested / completed
+- Re-review SHA when applicable:
+- Residual risk / merge decision owner when applicable:
 
 ## Security / runtime-network impact
 

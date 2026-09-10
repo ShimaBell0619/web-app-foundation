@@ -30,7 +30,7 @@ The current default for a new browser-first application is TypeScript + React + 
 
 Feature work is Issue-driven. An Issue represents one independently understandable objective with acceptance criteria. Related Issues may share a PR; an Issue may also span multiple PRs, using `Refs #N` until the final AC-completing PR uses `Closes #N`.
 
-Agents do not treat the first implementation pass as complete: read contracts -> implement -> self-review as another engineer -> correct/harden -> re-review -> final validation -> evidence-based completion report. Material auth/privilege, migration, release/publish, or reusable-workflow changes should receive independent review before merge when practical.
+Agents do not treat the first implementation pass as complete: read contracts -> implement -> self-review as another engineer -> correct/harden -> re-review -> final validation -> evidence-based completion report. Independent review is a separate risk-based layer: when Codex GitHub Code Review is used, Automatic Review stays off and a reviewer is requested explicitly with `@codex review` against the merge-candidate HEAD. See `docs/independent-review.md` for the responsibility split and operating rules.
 
 ## CI boundary
 
@@ -67,4 +67,4 @@ See `docs/pages.md` for the required caller workflows, permissions, security bou
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.

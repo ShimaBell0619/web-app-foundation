@@ -94,6 +94,24 @@ For material user-facing changes, use `docs/ui-review.md` as the review method a
 
 The guide is intentionally style-neutral: consumers keep their own visual direction and product-specific assertions in `DESIGN.md` and application tests.
 
+## Selective independent code review
+
+Consumers should inherit the `AGENTS.md` distinction between mandatory self-review and risk-based independent review. Do not treat a second pass by the implementation agent as independent evidence.
+
+When a consumer uses Codex GitHub Code Review as the independent reviewer:
+
+- make Code Review available for the repository but keep **Automatic Review / Review my pull requests OFF**;
+- normally wait until implementation, tests, self-review, and relevant CI have produced the intended merge-candidate HEAD;
+- before each `@codex review` invocation, including re-review, present the user/maintainer with the concrete review rationale, affected risk category, and expected value, and obtain explicit approval;
+- only after that approval, request review manually with `@codex review` from the PR conversation;
+- allow low-risk changes to skip the independent review with a recorded reason rather than making Codex a universal required check;
+- reassess Codex findings against the Issue, contracts, diff, tests, and CI rather than accepting them mechanically;
+- consider re-review after Blocker/High corrections or material security, compatibility, CI/CD, deployment, or implementation-path changes, not after every minor edit; a new Codex invocation requires fresh approval.
+
+The consumer's `AGENTS.md` should keep the high-impact reviewer focus from the Foundation: requirement mismatch, regressions, failure paths, security/auth boundaries, concurrency/races, compatibility, destructive/data-integrity risk, CI/CD gate bypass, deployment/rollback risk, and operational failure modes. Style/lint noise belongs primarily to deterministic tooling.
+
+`docs/independent-review.md` is the Foundation operating reference. Consumers do not need a new workflow merely to use this method, and the Foundation does not require a Codex status check on every PR.
+
 ## Optional GitHub Pages previews
 
 Static project Pages consumers use a two-phase adoption sequence.

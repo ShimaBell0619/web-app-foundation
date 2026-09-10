@@ -7,8 +7,8 @@
     "node": "^24.20.0 || >=26.0.0"
   },
   "scripts": {
-    "foundation:validate": "node scripts/validate-foundation.mjs",
-    "foundation:test": "node scripts/test-foundation-validator.mjs",
+    "foundation:validate": "node scripts/validate-foundation.mjs && node scripts/validate-independent-review.mjs",
+    "foundation:test": "node scripts/test-foundation-validator.mjs && node scripts/test-independent-review-contract.mjs",
     "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
     "foundation:test:web-pages": "node scripts/test-web-pages-contract.mjs && node scripts/test-pages-bootstrap-contract.mjs",
     "foundation:test:vercel-staging": "node --test scripts/test-vercel-fixed-staging-contract.mjs",
