@@ -10,16 +10,12 @@ const sourceVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const files = [
   'README.md', 'PRODUCT.base.md', 'DESIGN.base.md', 'AGENTS.md', 'CHANGELOG.md',
   'package.json', 'package-lock.json', '.changeset/config.json',
-  '.github/workflows/web-ci.yml', '.github/workflows/web-pages-candidate.yml',
-  '.github/workflows/web-pages-publish.yml', '.github/workflows/foundation-ci.yml',
+  '.github/workflows/web-ci.yml', '.github/workflows/foundation-ci.yml',
   '.github/ISSUE_TEMPLATE/work-item.yml', '.github/pull_request_template.md',
-  'docs/adoption.md', 'docs/ci-performance.md', 'docs/pages.md', 'docs/versioning.md',
+  'docs/adoption.md', 'docs/ci-performance.md', 'docs/versioning.md',
   'scripts/validate-foundation.mjs', 'scripts/test-foundation-validator.mjs',
   'scripts/sync-foundation-version.mjs', 'scripts/validate-release-state.mjs',
-  'scripts/test-web-ci-contract.mjs', 'scripts/test-web-pages-contract.mjs',
-  'scripts/test-release-cycle.mjs', 'templates/github-pages/capture-pr-preview.mjs',
-  'fixtures/pages-consumer/package.json', 'fixtures/pages-consumer/package-lock.json',
-  'fixtures/pages-consumer/scripts/build.mjs',
+  'scripts/test-web-ci-contract.mjs', 'scripts/test-release-cycle.mjs',
   'fixtures/consumer/package.json', 'fixtures/consumer/package-lock.json',
   'fixtures/consumer/scripts/verify.mjs', 'fixtures/install-proof/package.json',
   'fixtures/install-proof/index.cjs',
@@ -208,14 +204,6 @@ try {
         setField(workflow.jobs.validate, 'permissions', { contents: 'write' }, 'job write permission mutation');
       }, 'job write permission mutation');
       run(dir, false, `job write permission from ${version}`);
-    }
-
-    {
-      const dir = makeCopy(version); dirs.push(dir);
-      mutateWorkflow(dir, '.github/workflows/web-pages-publish.yml', (workflow) => {
-        setField(workflow.jobs.publish.permissions, 'packages', 'write', 'publisher unexpected write permission mutation');
-      }, 'publisher unexpected write permission mutation');
-      run(dir, false, `publisher unexpected write permission from ${version}`);
     }
 
     {

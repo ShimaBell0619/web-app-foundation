@@ -1,8 +1,8 @@
 # Vercel Git-integrated hosting profile
 
-Vercel is an optional application-owned hosting profile. It does not replace the reusable Foundation quality CI contract.
+Vercel Git Integration is the default application-owned hosting profile for new Web App Foundation consumers. It does not replace the reusable Foundation quality CI contract.
 
-Use this profile when the application benefits from native Git integration, automatic Preview deployments, and a Production deployment from the configured production branch without maintaining a custom deployment GitHub Action.
+Use the native Git integration for automatic Preview deployments and Production deployment from the configured production branch without maintaining a custom deployment GitHub Action. A consumer may document a different hosting choice when product or platform requirements justify it, but the Foundation does not maintain parallel deployment capabilities merely for optionality.
 
 ## Responsibility split
 
@@ -45,7 +45,8 @@ If a product requires the stronger invariant "Production publish cannot start un
 3. Keep the app-owned Foundation CI caller unchanged.
 4. Configure Production and Preview environment variables in Vercel rather than moving hosting build configuration into GitHub Actions unnecessarily.
 5. Add repository configuration only when framework/platform defaults are insufficient.
-6. Verify one PR Preview and one Production deployment before treating the profile as adopted.
+6. Configure the canonical Production custom domain under an owner-managed domain when available.
+7. Verify one PR Preview and one Production deployment before treating the profile as adopted.
 
 ## Environment-variable ownership
 
@@ -79,15 +80,23 @@ Document this distinction rather than treating "Preview deployment succeeded" as
 
 When exact-origin integration validation is a recurring requirement, layer the optional `docs/vercel-fixed-staging.md` profile on top of this profile. It keeps ordinary PR Preview intact while providing one explicitly selected `staging` branch/domain whose ref is moved to the current PR HEAD.
 
-## Custom domains
+## Custom-domain convention
 
-Custom-domain ownership is application/provider configuration, not a Foundation contract. Record the canonical Production URL in the consuming application's README/deployment documentation and test it after DNS/domain changes.
+For applications managed under one owner-controlled domain, use this convention when practical:
 
-A fixed Staging Branch Domain is likewise application/provider configuration. The Foundation can provide the trusted ref-selection workflow, but Vercel/DNS/OAuth allowlists remain external setup.
+- Production: `<app>.<domain>`
+- Fixed Staging: `staging.<app>.<domain>`
+- Ephemeral PR Preview: the Vercel-provided Preview URL
+
+The concrete domain remains owner/application configuration. Record the canonical Production and Fixed Staging URLs in the consuming application's README/deployment documentation and revalidate them after DNS/domain changes.
+
+Do not allocate custom domains for every PR by default. Ephemeral Preview URLs already provide that lifecycle; a stable custom Staging origin exists specifically for integrations or review flows that require a fixed origin.
+
+Vercel/DNS/OAuth allowlists remain external setup. The Foundation fixed-Staging profile owns only the trusted GitHub ref-selection contract.
 
 ## Proven consumer evidence
 
-`ms-credentials-tracker` migrated from GitHub Pages to Vercel while retaining the reusable Foundation CI quality gate. It used:
+`ms-credentials-tracker` uses Vercel while retaining the reusable Foundation CI quality gate. It used:
 
 - Git-connected PR Preview deployments;
 - `main` Production deployment;
@@ -98,7 +107,7 @@ A fixed Staging Branch Domain is likewise application/provider configuration. Th
 - a fixed `staging` Branch Domain for OAuth/origin-dependent validation while retaining ordinary PR Preview;
 - explicit trusted-main ref promotion of one selected same-repository PR HEAD into the `staging` slot.
 
-This consumer evidence is the basis for these optional Vercel profiles; GitHub Pages remains a separate supported optional capability.
+This real-consumer evidence is the basis for Vercel Git Integration as the Foundation default hosting profile.
 
 ## References
 
