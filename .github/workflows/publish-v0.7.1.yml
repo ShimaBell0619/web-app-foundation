@@ -1,0 +1,37 @@
+name: Publish v0.7.1
+
+on:
+  push:
+    branches:
+      - chore/publish-v0.7.1
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_SHA: 4e8d704865b429cfa8d94631d34f93cb3b4ad44c
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify validated main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/main | cut -f1)"
+          test "$actual" = "$EXPECTED_SHA"
+      - name: Publish immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.7.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v0.7.1 already exists"
+            exit 0
+          fi
+          gh release create v0.7.1 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$EXPECTED_SHA" \
+            --title "v0.7.1" \
+            --notes $'## Highlights\n\n- Reuse revision-bound evidence and known run/job identifiers inside the session-local Repository Context Packet.\n- Refresh mutable state only when current-state or staleness conditions require it.\n- Distinguish missing validation evidence from a known production defect.\n- Prefer the smallest focused proof before changing stable production code when existing behavior is expected to be preserved.'
