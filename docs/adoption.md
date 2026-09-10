@@ -13,11 +13,10 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically. If a Vercel consumer also needs one stable Preview origin, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview.
+10. Use Vercel Git Integration as the default hosting/deployment path for new consumers. Configure an owner-managed Production custom domain when available; if one stable Preview origin is required, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview. Document a different hosting choice only when product or platform requirements justify it.
 11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
 12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
 
-For GitHub Pages specifically, complete **Pages Phase 0** before the first preview-enabled application/UI PR, then complete **Pages Phase 1** as documented below.
 
 ## Provenance
 
@@ -154,40 +153,14 @@ The consumer's `AGENTS.md` should keep the high-impact reviewer focus from the F
 
 `docs/independent-review.md` is the Foundation operating reference. Consumers do not need a new workflow merely to use this method, and the Foundation does not require a Codex status check on every PR.
 
-## Optional GitHub Pages previews
-
-Static project Pages consumers use a two-phase adoption sequence.
-
-**Pages Phase 0 — trusted publisher bootstrap**
-
-- copy `templates/github-pages/pages-publish.yml`,
-- replace the Foundation SHA placeholder,
-- merge the workflow-only change to the repository's default branch,
-- configure Pages Source as GitHub Actions.
-
-This ordering is required because GitHub does not trigger a newly introduced `workflow_run` workflow for the same PR that introduces it.
-
-**Pages Phase 1 — candidate + application/UI work**
-
-- add the Foundation Pages candidate job after `verify`,
-- keep candidate execution read-only,
-- let the already-trusted default-branch publisher publish successful same-repository candidates.
-
-The standard pattern provides:
-
-- production root plus temporary `/pr-N/` previews,
-- serialized aggregate staging and PR-close cleanup,
-- optional 390px/1440px screenshots embedded in one updatable PR comment,
-- a trust split where application code runs only in the read-only candidate job and the write-enabled publisher never checks out or executes PR code.
-
-See `docs/pages.md` for the exact sequence, caller template, and security checklist.
-
-## Optional Vercel Git integration
+## Default Vercel Git integration
 
 For applications that prioritize native Preview deployments and minimal deployment-workflow maintenance:
 
 - connect/import the repository in Vercel;
 - keep the Foundation CI caller as the quality gate;
+- use an owner-managed stable Production domain when available, normally `<app>.<domain>`;
+- use `staging.<app>.<domain>` for Fixed Staging when a stable origin is required; keep ordinary PR previews on Vercel-provided Preview URLs;
 - let Vercel own branch/PR Preview deployment and the configured Production Branch deployment;
 - keep Production/Preview build configuration in the corresponding Vercel environment scopes;
 - add `templates/vercel/vite-spa-vercel.json` only for a client-side routed Vite SPA that needs a catch-all fallback;
@@ -234,7 +207,7 @@ For convenience-first personal repository fleets, `docs/azure-oidc.md` documents
 
 ## Deployment safety boundary
 
-The Foundation does not select a deployment provider, but derived apps should preserve these provider-independent rules:
+Vercel Git Integration is the Foundation default hosting profile. Consumers with a justified alternative should still preserve these provider-independent rules:
 
 - keep required quality CI and deployment status independently visible;
 - do not treat a Preview/hosting check as a substitute for application tests;

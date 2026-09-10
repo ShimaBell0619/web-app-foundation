@@ -46,27 +46,30 @@ The same profile explicitly rejects overengineering: new abstractions, dependenc
 
 `.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It requires `check`, `typecheck`, `test`, and production `build` by default. Check/typecheck/test can be skipped only through an explicit workflow opt-out with a non-empty reason; build remains mandatory. A small consumer fixture runs the reusable workflow in Foundation CI so GitHub validates the actual shared workflow, not only text markers.
 
-The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Deployment providers remain application decisions. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.
+The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.
 
-## Optional operational profiles
+## Default hosting profile
 
-The Foundation now separates provider-independent quality rules from optional provider-specific profiles proven in real consumers:
+Vercel Git Integration is the default hosting/deployment profile for new web-app consumers. Foundation CI remains the quality gate; Vercel owns branch/PR Preview and Production deployment. Do not add a redundant custom Vercel deployment Action merely to duplicate native Git Integration behavior.
 
-- `docs/pages.md` — GitHub Pages candidate/publisher capability with explicit privilege separation.
-- `docs/vercel.md` — Vercel native Git-integrated Preview/Production hosting profile; no redundant deployment Action.
+For applications under one owner-managed domain, use a stable naming convention when practical:
+
+- Production: `<app>.<domain>`
+- Fixed Staging, when needed: `staging.<app>.<domain>`
+- ordinary ephemeral PR Preview: Vercel-provided Preview URL
+
+Use a fixed Staging domain only when an exact/stable origin is materially required, such as OAuth allowlisting. Do not create per-PR custom-domain automation by default.
+
+See `docs/vercel.md` for the hosting contract and `docs/vercel-fixed-staging.md` for the optional fixed-origin Staging slot.
+
+## Operational profiles
+
+- `docs/vercel.md` — default Vercel native Git-integrated Preview/Production hosting profile; no redundant deployment Action.
 - `docs/vercel-fixed-staging.md` — optional fixed-origin, single-PR Staging slot layered on Vercel Git Integration for OAuth/origin-dependent validation.
-- `docs/application-releases.md` — application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
-- `docs/azure-oidc.md` — GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
+- `docs/application-releases.md` — optional application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
+- `docs/azure-oidc.md` — optional GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
 
-These profiles are optional. Adopting one does not make its provider/runtime a universal Foundation dependency.
-
-## Optional GitHub Pages capability
-
-For static project Pages consumers, `.github/workflows/web-pages-candidate.yml` and `.github/workflows/web-pages-publish.yml` provide an optional production + temporary PR preview pattern.
-
-The capability deliberately separates unprivileged application build/screenshot work from privileged Pages publication. The publisher consumes a candidate artifact from a successful CI workflow run without checking out or executing PR source code. It also supports `/pr-N/` previews, close cleanup, serialized aggregate staging, and mobile-friendly screenshot comments.
-
-See `docs/pages.md` for the required caller workflows, permissions, security boundary, Vite base-path behavior, and screenshot template.
+A consumer may document a justified hosting deviation when product or platform requirements demand it, but the Foundation keeps one default hosting path rather than maintaining parallel deployment capabilities without current evidence.
 
 ## Versioning
 
@@ -77,4 +80,4 @@ See `docs/pages.md` for the required caller workflows, permissions, security bou
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.

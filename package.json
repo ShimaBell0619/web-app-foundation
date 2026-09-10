@@ -10,7 +10,6 @@
     "foundation:validate": "node scripts/validate-foundation.mjs && node scripts/validate-independent-review.mjs && node scripts/validate-ui-profile.mjs && node scripts/validate-ai-implementation.mjs",
     "foundation:test": "node scripts/test-foundation-validator.mjs && node scripts/test-independent-review-contract.mjs && node scripts/test-ui-profile-contract.mjs && node scripts/test-ai-implementation-contract.mjs",
     "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
-    "foundation:test:web-pages": "node scripts/test-web-pages-contract.mjs && node scripts/test-pages-bootstrap-contract.mjs",
     "foundation:test:vercel-staging": "node --test scripts/test-vercel-fixed-staging-contract.mjs scripts/test-vercel-fixed-staging-context.mjs",
     "foundation:test:release": "node scripts/test-release-cycle.mjs",
     "foundation:release-validate": "node scripts/validate-release-state.mjs",
