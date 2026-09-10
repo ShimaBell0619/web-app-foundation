@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- dce5388: Add a context-routed Chat-based AI implementation profile that deterministically selects repository contracts, extracts session-local Design Intent, maps contracts to implementation and validation evidence, batches GitHub I/O around coherent candidates, and explicitly rejects unjustified overengineering while preserving existing review, CI, conflict, and UI-validation boundaries.
+
 ## 0.6.0
 
 ### Minor Changes
