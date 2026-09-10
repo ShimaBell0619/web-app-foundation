@@ -13,7 +13,7 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically.
+10. Select hosting/deployment as an application decision. Use `docs/pages.md` for the optional GitHub Pages profile or `docs/vercel.md` for the optional Vercel Git-integrated profile; do not adopt both mechanically. If a Vercel consumer also needs one stable Preview origin, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview.
 11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
 12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
 
@@ -134,6 +134,23 @@ For applications that prioritize native Preview deployments and minimal deployme
 - document third-party identity limitations such as exact OAuth origins separately from deployment success.
 
 Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff and the alternative when exact post-CI publish ordering is required.
+
+### Optional fixed Staging slot
+
+When a Vercel consumer needs a stable origin for OAuth or other origin-dependent integration validation, keep normal PR Preview and add `docs/vercel-fixed-staging.md`.
+
+Copy all four app-owned files:
+
+- `templates/vercel/fixed-staging/request-staging.yml` -> `.github/workflows/request-staging.yml`;
+- `templates/vercel/fixed-staging/deploy-staging.yml` -> `.github/workflows/deploy-staging.yml`;
+- `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`;
+- `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`.
+
+Create `staging` from `main`, add `FIXED_STAGING_URL`, then merge the bootstrap workflows to `main` before using the steady-state path. The manual workflow is read-only; its short-lived request artifact is consumed by a write-enabled `workflow_run` publisher that executes from the trusted default-branch context and independently validates the selected PR.
+
+Map the Vercel Branch Domain to `staging`, scope only the required Preview configuration to that branch, and register the exact fixed origin with the external provider. The selected PR code later executes in that Vercel environment, so Staging configuration is a separate trust boundary from the GitHub publisher.
+
+The slot points directly at the selected same-repository PR HEAD and uses compare-and-swap cleanup. Do not merge feature branches into `staging` or treat it as release history.
 
 ## Optional application GitHub Release flow
 
