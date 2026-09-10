@@ -67,7 +67,7 @@ For every material change:
 3. **Correct/harden** — autonomously fix real defects or reasonable hardening gaps that do not require a new approval-required decision.
 4. **Re-review** — inspect the affected code and behavior again after corrections.
 5. **Final validation** — run the relevant checks from a clean/reproducible state where practical.
-6. **Completion report** — state what changed, acceptance-criteria evidence, reviewed commit/SHA or diff scope, review findings/corrections, validation results, and remaining risk.
+6. **Completion report** — state what changed, acceptance-criteria evidence, reviewed commit/SHA or diff scope, review findings/corrections, validation results, independent-review decision/evidence when applicable, and remaining risk.
 
 Self-review should consider, where relevant: acceptance criteria and product-contract fit; regressions and edge cases; security/privacy boundaries; error/failure behavior; state lifecycle and cleanup; accessibility and focus behavior; responsive/rendered UI; performance hot paths; maintainability and unnecessary abstraction; dependency/supply-chain impact; and whether tests validate behavior rather than implementation trivia.
 
@@ -85,7 +85,33 @@ Do not report a material change as complete until:
 
 If a material finding cannot be fixed within the approved scope, surface it and leave the work explicitly incomplete/conditional rather than hiding it in the completion report.
 
-For changes to authentication/authorization, destructive migrations, release/publishing machinery, privileged workflows, or reusable Foundation workflows, obtain an independent human or second-agent review before merge when practical. Self-review remains required but is not treated as independent review.
+Self-review remains mandatory even when an independent review is requested. An implementation agent reviewing its own work again with the same implementation context is still self-review, not independent review.
+
+## Independent review
+
+Independent review is a separate, risk-based review layer performed by a reviewer that did not own the implementation context. It supplements rather than replaces the mandatory self-review and CI evidence above. The detailed operating method lives in `docs/independent-review.md`.
+
+- Low-risk changes may skip independent review when the decision and reason are recorded in the PR.
+- For authentication/authorization or trust-boundary changes; destructive migration or data-integrity risk; concurrency/race-sensitive behavior; compatibility/public-contract changes; release/publishing/deployment/rollback machinery; privileged workflows; reusable Foundation workflows; or other changes whose failure may appear only in production/operations, obtain independent review before merge when practical.
+- Request independent review against the intended **merge-candidate HEAD** after self-review and relevant CI have succeeded, so the reviewer evaluates the version that is actually proposed for merge.
+- Before every Codex review invocation, including re-review, present the user/maintainer with the concrete reason the review is warranted, the affected risk category, and the expected review value, then obtain explicit approval. Do not invoke `@codex review` autonomously or treat approval for an earlier invocation as approval for a later one.
+- When Codex GitHub Code Review is used, keep **Automatic Review / Review my pull requests OFF** and, only after that explicit approval, request it manually from the PR conversation with `@codex review`. Do not make every PR consume an independent review by default.
+- Treat repository evidence as authoritative for the independent review: PR purpose, Issue/acceptance criteria, final diff, repository contracts including `AGENTS.md`, tests, and CI. The implementation agent's private conversation, hidden reasoning, or self-review conclusions are not prerequisites and must not be treated as authoritative evidence.
+- Independent reviewers should prioritize requirement mismatch, regression, failure/error paths, security boundaries, authentication/authorization, concurrency/race conditions, backward compatibility, destructive side effects, data integrity, CI/CD quality-gate bypass, deployment/rollback defects, and serious operational failure modes.
+- Do not fill an independent review with formatting/style preferences or minor findings that deterministic CI should own unless they expose a correctness, security, compatibility, or operability problem.
+- The implementation agent must reassess each independent finding rather than accepting it mechanically. Fix valid findings; reject non-applicable findings with concise evidence; surface unresolved material risk instead of silently dismissing it.
+- Do not rerun independent review after every correction. Consider another review when responding to a Blocker/High finding, changing a security/auth/privilege boundary, materially changing compatibility or CI/CD behavior, or taking a substantially different implementation path. Local low-risk corrections normally do not need another review. Any new Codex invocation still requires a fresh rationale and explicit approval.
+- Record the independent-review decision, review rationale, approval evidence when Codex is used, reviewed SHA, material findings/disposition, and re-review decision in the PR. If the HEAD changes after review, explicitly decide whether the previous review still covers the merge candidate based on the materiality of the change.
+
+## Code Review Rules
+
+When acting as an independent code reviewer, prioritize concrete high-impact defects over mechanical or stylistic findings.
+
+- **Contract integrity** — compare the PR purpose, linked Issue/Acceptance Criteria, diff, tests, and current repository contracts. Flag requirement mismatches, regressions, or consumer-facing contract changes that omit required documentation or Changeset evidence.
+- **Trust and delivery safety** — flag any path that executes untrusted PR code with write credentials or secrets, bypasses required quality gates, publishes/deploys a different source revision than the validated SHA, or makes rollback/recovery materially unsafe.
+- **State and compatibility safety** — flag concrete concurrency, ordering, retry/idempotency, data-integrity, destructive-side-effect, or backward-compatibility failures, especially when partial failure, cleanup, or operator actions can overwrite or corrupt newer valid state.
+
+Do not report formatting, naming taste, style preference, or routine lint/type issues unless they materially contribute to a correctness, security, compatibility, or operability defect. Deterministic checks should own mechanical enforcement.
 
 ## Architecture
 
