@@ -7,8 +7,8 @@ For a new application:
 1. Start from real product requirements rather than copying a full framework stack blindly.
 2. Copy `PRODUCT.base.md` to `PRODUCT.md` and replace template text with the approved product contract.
 3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale. For a new React-oriented browser-first UI, adopt the default primitive-first profile in `docs/ui-implementation.md`; for material UI work, use `docs/ui-review.md` to validate the rendered result against that product-specific direction.
-4. Copy/adapt the relevant `AGENTS.md` rules. Add app-specific constraints rather than depending on chat memory.
-5. Add specialist documents only when needed, commonly `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/RELEASE.md`, or `docs/COMPATIBILITY.md`.
+4. Copy/adapt the relevant `AGENTS.md` rules. Add app-specific constraints rather than depending on chat memory, and maintain the repository's Context Routing for normative specialist documents as described in `docs/ai-implementation.md`.
+5. Add specialist documents only when needed, commonly `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/RELEASE.md`, or `docs/COMPATIBILITY.md`. When such a document becomes normative for implementation decisions, register it in Context Routing in the same change.
 6. Use a committed Node version file and package-manager lockfile.
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
@@ -35,6 +35,35 @@ An application should keep a small provenance record, for example in `docs/FOUND
 ```
 
 Copied rules/templates do not change automatically. Reusable workflows execute the exact commit SHA referenced by the app. Upgrade both deliberately, and read the current provenance before changing Foundation-derived rules or workflow refs.
+
+## Context-routed Chat implementation
+
+Consumers that use Chat-based implementation should adopt the context-routing contract from `AGENTS.md` and the detailed method in `docs/ai-implementation.md`.
+
+Keep the routing index small and repository-specific. A typical consumer starts with the base route (`PRODUCT.md`, `AGENTS.md`, Issue/Acceptance Criteria, and Foundation provenance when present) and registers only specialist documents that actually exist and are normative for implementation. Typical mappings are:
+
+```markdown
+## Context routing
+
+| Change area | Required context |
+| --- | --- |
+| Product design / UX | DESIGN.md |
+| UI infrastructure | DESIGN.md, adopted UI implementation/review guidance |
+| Domain / data | docs/DOMAIN.md, docs/ARCHITECTURE.md |
+| Integration / trust | integration-specific contract, docs/ARCHITECTURE.md, security contract when present |
+| Delivery / operations | affected deployment/release/staging contract |
+| Foundation adoption | docs/FOUNDATION.md, target Foundation guidance/change notes |
+```
+
+Do not create empty documents merely to match this example. Adapt the table to actual repository paths. Matching routes are additive, so a staging OAuth change can require both integration/trust and delivery/operations context.
+
+When a normative specialist document is introduced, renamed, split, or retired, update Context Routing in the same change if future agents need it to find that contract. Issue authors should point to unusual Issue-specific constraints but should not copy full design/architecture contracts into every Issue.
+
+For each material Issue, the implementation agent builds a session-local Repository Context Packet, extracts Design Intent, and maps contract/Acceptance Criteria -> implementation surface -> validation evidence before implementation. Do not commit that packet as a permanent context artifact. Repository contracts at the recorded revision remain authoritative.
+
+Adoption does not require rewriting stable code merely to conform to a newer Foundation default. Use the new method on the next objective-driven material change and migrate implementation mechanisms only when the change has a concrete benefit.
+
+The same profile includes an explicit complexity discipline: speculative abstractions, dependencies, layers, workflows, configuration formats, and permanent process artifacts are not acceptable future-proofing. Add complexity only when a current requirement, real responsibility/trust/lifecycle boundary, observed repetition, measured evidence, or already-adopted Foundation contract justifies it.
 
 ## Minimum npm contract
 

@@ -38,6 +38,10 @@ Feature work is Issue-driven. An Issue represents one independently understandab
 
 Agents do not treat the first implementation pass as complete: read contracts -> implement -> self-review as another engineer -> correct/harden -> re-review -> final validation -> evidence-based completion report. Independent review is a separate risk-based layer: when Codex GitHub Code Review is used, Automatic Review stays off and a reviewer is requested explicitly with `@codex review` against the merge-candidate HEAD. See `docs/independent-review.md` for the responsibility split and operating rules.
 
+For normal Chat-based implementation, `docs/ai-implementation.md` adds a context-routed profile above that loop: classify the change, deterministically route only the required repository contracts, build a session-local Repository Context Packet, extract change-specific Design Intent, map contract -> implementation surface -> validation evidence, then batch GitHub reads/writes around that map. The packet never replaces repository contracts, and speed improvements never remove conflict detection, self-review, CI, or rendered UI validation.
+
+The same profile explicitly rejects overengineering: new abstractions, dependencies, layers, services, workflows, configuration formats, or permanent process artifacts need a current requirement, real boundary, observed repetition, measured evidence, or adopted Foundation contract. Hypothetical future reuse and conformity alone are not sufficient reasons.
+
 ## CI boundary
 
 `.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It requires `check`, `typecheck`, `test`, and production `build` by default. Check/typecheck/test can be skipped only through an explicit workflow opt-out with a non-empty reason; build remains mandatory. A small consumer fixture runs the reusable workflow in Foundation CI so GitHub validates the actual shared workflow, not only text markers.
@@ -73,4 +77,4 @@ See `docs/pages.md` for the required caller workflows, permissions, security bou
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
