@@ -18,7 +18,7 @@ jobs:
           ref: feat/issue-39-ui-profile
           fetch-depth: 0
 
-      - name: Reuse implementation with corrected regression mutation
+      - name: Reuse implementation with corrected regression mutations
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +39,14 @@ jobs:
                   continue
               break
           script = '\n'.join(script_lines) + '\n'
-          old = "text.replace('Tailwind CSS', 'utility framework')"
-          new = "text.replaceAll('Tailwind CSS', 'utility framework')"
-          if script.count(old) != 1:
-              raise SystemExit(f'expected one Tailwind mutation, found {script.count(old)}')
-          script = script.replace(old, new)
+          replacements = {
+              "text.replace('Tailwind CSS', 'utility framework')": "text.replaceAll('Tailwind CSS', 'utility framework')",
+              "text.replace('Specialist custom CSS', 'No custom styles')": "text.replaceAll('Specialist custom CSS', 'No custom styles')",
+          }
+          for old, new in replacements.items():
+              if script.count(old) != 1:
+                  raise SystemExit(f'expected one regression mutation expression, found {script.count(old)}: {old}')
+              script = script.replace(old, new)
           Path('/tmp/apply-ui-profile.sh').write_text(script)
           PY
 
