@@ -57,6 +57,7 @@ A normal change PR and a release PR have different contracts:
 - Run `npm run version-packages`.
 - Changesets updates `package.json` and `CHANGELOG.md` and consumes the pending Changeset files.
 - The committed sync script then updates the Foundation version mirrors in `package-lock.json`, `README.md`, and `AGENTS.md`.
+- Stage only the intended generated release-state files and the deletion of the specific consumed Changeset files. Do not use broad `git add -A` after `npm ci`; dependency trees and other generated local artifacts are not release metadata.
 - Do **not** require a new Changeset merely because the release PR has no pending Changesets.
 - Run `npm run foundation:release-validate` to verify package/lock/README/AGENTS/CHANGELOG consistency.
 
