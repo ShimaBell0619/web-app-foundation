@@ -37,6 +37,7 @@ jobs:
       - name: Validate generated release state
         run: |
           set -euo pipefail
+          rm .github/workflows/prepare-v081.yml
           npm run foundation:validate
           npm run foundation:test
           npm run foundation:test:web-ci
