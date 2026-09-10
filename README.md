@@ -26,6 +26,12 @@ Application repositories remain self-contained. Product and design templates are
 
 The current default for a new browser-first application is TypeScript + React + Vite + npm with a committed lockfile and a production-suitable Node LTS pinned in `.node-version`. These are defaults, not permanent restrictions; SSR, server components, API routes, backend services, databases, or alternative frameworks are introduced when product requirements justify them.
 
+## Default UI implementation profile
+
+For new React-oriented browser-first consumers, the default UI implementation profile is **Tailwind CSS + shadcn/ui-style accessible primitives + product-specific semantic composition**. Generic controls should come from mature primitives; product identity should come from information hierarchy, layout, tokens, typography, density, data presentation, and interaction flow rather than bespoke reimplementation of routine controls.
+
+The profile is a default, not a forced shared skin. Existing consumers are not required to migrate solely for conformity, and non-React or established-design-system consumers may document an equivalent accessible primitive approach. See `docs/ui-implementation.md` for the layering, custom-CSS boundary, demo-composition guardrails, and deviation rules.
+
 ## AI development lifecycle
 
 Feature work is Issue-driven. An Issue represents one independently understandable objective with acceptance criteria. Related Issues may share a PR; an Issue may also span multiple PRs, using `Refs #N` until the final AC-completing PR uses `Closes #N`.
@@ -67,4 +73,4 @@ See `docs/pages.md` for the required caller workflows, permissions, security bou
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/pages.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.

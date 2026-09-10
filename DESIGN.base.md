@@ -42,6 +42,8 @@ Each application should make the following rationale explicit in `DESIGN.md` whe
 
 The Foundation does not prescribe a shared product skin. Do not copy another consumer's colors, radii, typography, motifs, or dashboard structure merely because that consumer validated a useful design principle.
 
+Implementation primitives and product visual identity are separate concerns. For the current React baseline, `docs/ui-implementation.md` defines the default primitive-first layering; this `DESIGN.md` remains authoritative for the application's information hierarchy, composition, token meaning, typography, density, and visual rationale.
+
 ## Colors
 
 - Define semantic roles rather than scattering literal colors through components.
@@ -90,8 +92,12 @@ The Foundation does not prescribe a shared product skin. Do not copy another con
 ## Components
 
 - Prefer semantic HTML and accessible platform behavior before custom interaction primitives.
+- For the current React baseline, start common controls from the default profile in `docs/ui-implementation.md`: Tailwind CSS styling infrastructure plus shadcn/ui-style accessible generic primitives where applicable.
+- Keep generic primitive code free of product-domain meaning, and build product-specific semantic components above it.
 - Reuse proven component primitives when they improve accessibility and consistency.
 - Create app-specific reusable components only when a real pattern repeats or expresses a durable product interaction rule.
+- Derive product identity from hierarchy, composition, typography, semantic color, density, data presentation, and interaction flow rather than bespoke reinvention of routine controls.
+- Keep specialist custom CSS when it clearly improves a product-specific visualization or interaction that generic utilities/primitives do not express well.
 - Preserve keyboard navigation, focus visibility, labels/names, error association, and appropriate target sizes.
 - Model loading, empty, error, disabled, selected, and success states deliberately when relevant.
 - Use progress indicators only when the underlying value represents meaningful progress or completion semantics.
@@ -121,11 +127,12 @@ The Foundation does not prescribe a shared product skin. Do not copy another con
 - Do not use motion, shadows, gradients, glass effects, cards, pills, icon boxes, or visual density merely because a UI library or AI generator makes them easy.
 - Do not treat generic phrases such as “modern dashboard” or “clean SaaS” as sufficient design rationale.
 - Do not mechanically ban common visual patterns in the name of avoiding AI-generated design; require a product reason and keep useful patterns when they genuinely serve the task.
+- Do not copy a component-library demo/page composition and treat primitive defaults as the product information architecture.
 - Do not imitate a vendor's visual language when the consumer's task or information hierarchy is different.
 - Do not hide essential actions behind hover-only behavior.
 - Do not treat a single desktop screenshot as responsive validation.
 - Do not make an external design file the only source of truth required for routine AI implementation.
 
-See `docs/ui-review.md` in the Foundation repository for the rendered-review method, generic/AI-template review signals, viewport baseline, accessibility checks, and Japanese/CJK rendering notes.
+See `docs/ui-implementation.md` for the primitive-first implementation profile and `docs/ui-review.md` for the rendered-review method, generic/AI-template review signals, viewport baseline, accessibility checks, and Japanese/CJK rendering notes.
 
 Google's DESIGN.md format is currently alpha. Preserve valid machine-readable front matter, prefer the reviewed published schema over invented fields, and keep unsupported but important design rationale in Markdown prose until the specification can represent it directly.
