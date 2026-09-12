@@ -1,6 +1,6 @@
 {
   "name": "web-app-foundation",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "private": true,
   "description": "AI-first shared foundation for web application development.",
   "engines": {

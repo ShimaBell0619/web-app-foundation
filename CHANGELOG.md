@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+### Minor Changes
+
+- cf05faf: BREAKING: make Fixed Staging the default Vercel hosted-review surface. Foundation Vercel consumers now disable automatic feature/PR Git deployments and allow only `main` (Production) and `staging` through repository-owned `git.deploymentEnabled` configuration. Add copyable generic/Vite SPA templates and contract validation for the policy.
+
 ## 0.8.1
 
 ### Patch Changes
