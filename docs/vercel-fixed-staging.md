@@ -200,7 +200,7 @@ The script uses Node.js standard-library/runtime APIs plus Git. It does not requ
 - GitHub Actions: `workflow_run`
   - https://docs.github.com/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run
 - GitHub Actions: secure `pull_request_target`
-  - https://docs.github.com/actions/reference/security/securely-using_pull_request_target
+  - https://docs.github.com/actions/reference/security/securely-using-pull_request_target
 - GitHub: `GITHUB_TOKEN` permissions
   - https://docs.github.com/actions/security-guides/automatic-token-authentication
 - Git: `--force-with-lease`
