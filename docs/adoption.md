@@ -13,7 +13,7 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. Use Vercel Git Integration as the default hosting/deployment path for new consumers, but restrict automatic Git deployment to `main` and `staging` with repository-owned `git.deploymentEnabled` configuration. Use Fixed Staging as the single hosted non-Production review slot rather than creating per-PR/feature deployments. Provider-side Preview/Branch Tracking state and a real post-adoption smoke are required evidence that the project actually honors this policy. Document a different hosting choice only when product or platform requirements justify it.
+10. Use Vercel Git Integration as the default hosting/deployment path for new consumers, but restrict automatic Git deployment to `main` and `staging` with repository-owned `git.deploymentEnabled` configuration using a slash-safe `"**": false` catch-all. Use Fixed Staging as the single hosted non-Production review slot rather than creating per-PR/feature deployments. Provider-side Preview/Branch Tracking state and a real post-adoption smoke are required evidence that the project actually honors this policy. Document a different hosting choice only when product or platform requirements justify it.
 11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
 12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
 
@@ -166,7 +166,7 @@ Repository configuration is part of the contract. Copy `templates/vercel/vercel-
 {
   "git": {
     "deploymentEnabled": {
-      "*": false,
+      "**": false,
       "main": true,
       "staging": true
     }
@@ -174,25 +174,25 @@ Repository configuration is part of the contract. Copy `templates/vercel/vercel-
 }
 ```
 
-Vercel treats unspecified branches as deployment-enabled, so the wildcard disable is required. When multiple patterns match, any matching `true` rule allows deployment; that is why `main` and `staging` remain enabled despite `"*": false`.
+Vercel treats unmatched branches as deployment-enabled and evaluates branch rules with minimatch. The globstar `**` is required because plain `*` does not span `/`; using `*` would fail to suppress common branch names such as `feature/foo` or `chore/issue-77-vercel-globstar`. When multiple patterns match, any matching `true` rule allows deployment, so `main` and `staging` remain enabled despite the `"**": false` catch-all.
 
-The repository policy is not sufficient evidence by itself. During provider setup, inspect Vercel Project Settings -> Environments: Production Branch Tracking must identify the production branch, and the Preview environment's Branch Tracking must be configured so Git-integrated branch eligibility honors the repository policy. A real consumer and a Vercel Community reproduction both showed that the presence of a correct `vercel.json` alone does not guarantee ordinary branch suppression. Therefore complete adoption only after a post-adoption smoke proves the effective behavior.
+Provider settings are still part of adoption evidence, but the real `auth-flow-lab` failure that motivated this correction was **not** caused by disabled Branch Tracking: Preview Branch Tracking was enabled and Production tracked `main`. The failure came from the old single-star wildcard. Complete adoption only after a post-adoption smoke proves effective behavior.
 
 Adopt the hosting profile as follows:
 
 - connect/import the repository in Vercel;
 - keep the Foundation CI caller as the quality gate;
 - keep normal feature/PR review in GitHub Actions and rendered-review artifacts rather than Vercel deployments;
-- inspect Preview Environment Branch Tracking and configure the provider project so repository deployment rules are honored;
+- confirm Production Branch Tracking uses `main` and Preview Branch Tracking remains enabled for the `staging` Preview deployment;
 - create `staging` from `main` and adopt the trusted Fixed Staging publisher/cleanup profile below;
 - use an owner-managed stable Production domain when available, normally `<app>.<domain>`;
 - use `staging.<app>.<domain>` for the fixed hosted review slot;
 - let Vercel own `staging` and the configured Production Branch deployment;
 - keep Production configuration in Production scope and scope Staging Preview configuration specifically to branch `staging`;
 - document third-party identity limitations and exact-origin requirements separately from deployment success;
-- run a post-adoption smoke after the policy is on `main`: ordinary feature branch -> no Vercel deployment, `staging` -> hosted review deployment, `main` -> Production deployment.
+- run a post-adoption smoke after the corrected policy is on `main`: ordinary slash-containing feature branch -> no Vercel deployment, `staging` -> hosted review deployment, `main` -> Production deployment.
 
-If an ordinary feature branch still creates a Vercel deployment, the profile is not adopted yet. Correct the provider-side environment/branch-tracking state and repeat the smoke instead of adding a parallel deployment mechanism.
+If an ordinary feature branch still creates a Vercel deployment with the corrected globstar policy, the profile is not adopted yet. Investigate the provider-side state from fresh evidence and repeat the smoke instead of adding a parallel deployment mechanism.
 
 Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff and the alternative when exact post-CI publish ordering is required.
 
