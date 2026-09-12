@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2
+
+### Patch Changes
+
+- 2e5ceee: Fix the staging-only Vercel branch policy so the catch-all uses slash-safe minimatch globstar `**`; ordinary branches such as `feature/foo` and `chore/...` no longer fall through to Vercel's default deployment-enabled behavior. Update validation and adoption guidance from real `auth-flow-lab` evidence.
+
 ## 0.9.1
 
 ### Patch Changes
