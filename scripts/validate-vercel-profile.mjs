@@ -39,11 +39,13 @@ function validateDeploymentPolicy(path, { requireSpaRewrite = false } = {}) {
     fail(`${path} git.deploymentEnabled must be a branch-rule mapping`);
   } else {
     const keys = Object.keys(policy).sort();
-    const expectedKeys = ['*', 'main', 'staging'];
+    const expectedKeys = ['**', 'main', 'staging'];
     if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
-      fail(`${path} git.deploymentEnabled must define only *, main, and staging`);
+      fail(`${path} git.deploymentEnabled must define only **, main, and staging`);
     }
-    if (policy['*'] !== false) fail(`${path} must disable Git deployment for all branches by default`);
+    if (policy['**'] !== false) {
+      fail(`${path} must disable Git deployment with ** so slash-containing branches are covered`);
+    }
     if (policy.main !== true) fail(`${path} must enable Git deployment for main`);
     if (policy.staging !== true) fail(`${path} must enable Git deployment for staging`);
   }
@@ -86,6 +88,8 @@ for (const path of providerGateDocs) {
 
 const vercelContract = docs['docs/vercel.md'];
 for (const marker of [
+  'slash-containing',
+  '`**`',
   'ordinary feature branch',
   'no Vercel deployment',
   '`staging`',
@@ -94,7 +98,7 @@ for (const marker of [
   'Production deployment',
 ]) {
   if (!vercelContract.includes(marker)) {
-    fail(`docs/vercel.md must preserve the three-path post-adoption smoke evidence: ${marker}`);
+    fail(`docs/vercel.md must preserve the Vercel deployment-policy evidence: ${marker}`);
   }
 }
 
