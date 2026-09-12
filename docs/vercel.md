@@ -2,59 +2,105 @@
 
 Vercel Git Integration is the default application-owned hosting profile for new Web App Foundation consumers. It does not replace the reusable Foundation quality CI contract.
 
-Use the native Git integration for automatic Preview deployments and Production deployment from the configured production branch without maintaining a custom deployment GitHub Action. A consumer may document a different hosting choice when product or platform requirements justify it, but the Foundation does not maintain parallel deployment capabilities merely for optionality.
+The default hosted topology is deliberately limited to two Git branches:
+
+- `main` -> Production;
+- `staging` -> the single fixed non-Production review slot.
+
+Feature branches, fix branches, and ordinary PR head branches do **not** create Vercel deployments by default. GitHub Actions remains the normal PR quality/review surface; Fixed Staging is used only when a hosted browser origin is materially needed.
+
+## Repository-owned deployment policy
+
+Every Vercel consumer should keep the branch deployment policy in repository-owned `vercel.json` configuration rather than relying only on mutable dashboard state.
+
+Use:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "*": false,
+      "main": true,
+      "staging": true
+    }
+  }
+}
+```
+
+Copy `templates/vercel/vercel-git.json` for an application that does not otherwise need Vercel routing configuration. A client-side routed Vite SPA should instead use `templates/vercel/vite-spa-vercel.json`, which carries the same Git deployment policy plus the SPA fallback rewrite.
+
+Vercel documents two details that make this shape important:
+
+- branches not mentioned in `git.deploymentEnabled` default to deployment enabled, so the catch-all `"*": false` rule is required;
+- if a branch matches multiple patterns, deployment occurs when at least one matching rule is `true`, so the explicit `main: true` and `staging: true` rules override the catch-all disable for those two branches.
+
+Do not replace this with an Ignored Build Step merely to suppress feature/PR builds. The intended contract is that those branches do not start a Vercel Git deployment at all.
 
 ## Responsibility split
 
 ```text
-Pull Request / branch
+feature/* or PR head
       |
-      +--> Foundation reusable CI --> quality evidence
+      +--> Foundation reusable CI / app-owned rendered review
       |
-      +--> Vercel Git integration --> Preview deployment
+      +--> no Vercel deployment
 
-merge to production branch
+explicit hosted review request
+      |
+      +--> trusted Fixed Staging publisher
+      |
+      +--> staging ref = selected PR HEAD
+      |
+      +--> Vercel Git integration --> Fixed Staging
+
+merge to main
       |
       +--> Vercel Git integration --> Production deployment
       |
-      +--> main CI                --> post-merge evidence for the production SHA
+      +--> main CI                --> post-merge evidence for the Production SHA
 ```
 
-Foundation CI owns static checks, typecheck, tests, build, and optional E2E. Vercel owns hosting and Preview/Production deployment lifecycle.
+Foundation CI owns static checks, typecheck, tests, build, and optional E2E. Application-owned rendered-review automation may provide screenshots/artifacts for normal PR review without consuming a hosted deployment. Vercel owns only the `staging` and Production deployment lifecycles in the default profile.
 
 Do not add a second custom Vercel deployment workflow merely to duplicate behavior already provided by the Git integration.
 
 ## Quality-gate tradeoff
 
-Native Vercel Git integration can begin a Production deployment as soon as the production-branch commit exists. It does not inherently wait for a separate post-merge Foundation CI run for that exact commit.
+Native Vercel Git integration can begin a Production deployment as soon as the `main` commit exists. It does not inherently wait for a separate post-merge Foundation CI run for that exact commit.
 
-Therefore applications using this convenience-first profile should:
+Applications using this convenience-first profile should:
 
 - require/observe the normal PR quality gate before merge;
-- treat the Vercel Preview as review evidence, not as a replacement for CI;
-- run Foundation CI on the merged production SHA as well;
+- use CI/rendered-review evidence for ordinary PR review rather than creating hosted Preview deployments for every push;
+- use Fixed Staging when browser-hosted or exact-origin verification is required;
+- run Foundation CI on the merged Production SHA as well;
 - verify the resulting Production deployment/status after merge;
 - record this hosting-native sequencing as an application-specific deployment choice.
 
-If a product requires the stronger invariant "Production publish cannot start until CI has succeeded for that exact production SHA", use a custom gated deployment/promotion path instead of the native Git-integrated Production trigger.
+If a product requires the stronger invariant "Production publish cannot start until CI has succeeded for that exact Production SHA", use a custom gated deployment/promotion path instead of the native Git-integrated Production trigger.
 
 ## Adoption
 
 1. Import/connect the GitHub repository to Vercel.
-2. Confirm the Production Branch is the intended application production branch, normally `main`.
-3. Keep the app-owned Foundation CI caller unchanged.
-4. Configure Production and Preview environment variables in Vercel rather than moving hosting build configuration into GitHub Actions unnecessarily.
-5. Add repository configuration only when framework/platform defaults are insufficient.
-6. Configure the canonical Production custom domain under an owner-managed domain when available.
-7. Verify one PR Preview and one Production deployment before treating the profile as adopted.
+2. Confirm the Production Branch is `main` unless the application deliberately documents another production branch.
+3. Add repository-owned `git.deploymentEnabled` configuration from `templates/vercel/vercel-git.json`, or use the Vite SPA template when its rewrite is required.
+4. Keep the app-owned Foundation CI caller unchanged.
+5. Create `staging` from current `main` and adopt the trusted Fixed Staging slot from `docs/vercel-fixed-staging.md`.
+6. Map the stable Staging Branch Domain/custom domain to `staging`.
+7. Configure Production values in Vercel Production scope and Staging values as branch-scoped Preview configuration for `staging`.
+8. Configure the canonical Production custom domain under an owner-managed domain when available.
+9. Validate one Fixed Staging deployment and one Production deployment before treating the profile as adopted.
 
 ## Environment-variable ownership
 
 Vercel supports environment-scoped configuration. Keep values in the environment that consumes them:
 
-- **Production** — live deployment configuration;
-- **Preview** — branch/PR Preview configuration;
+- **Production** — live `main` deployment configuration;
+- **Staging** — technically a Vercel Preview deployment for branch `staging`; scope only the values required for the fixed review slot to that branch;
 - **Development** — local/team development when Vercel-managed development variables are useful.
+
+Do not configure sensitive Staging values broadly for arbitrary Preview branches. Other branches should not deploy under the default `git.deploymentEnabled` policy, but branch-scoped configuration still makes the trust boundary explicit.
 
 Browser-prefixed values such as Vite `VITE_*` variables are build-time public client configuration. They are not secrets merely because they are configured as environment variables.
 
@@ -62,23 +108,21 @@ A configuration change normally requires a new deployment before the built appli
 
 ## Vite SPA fallback
 
-A client-side routed Vite SPA may need a fallback for direct subpath navigation/reload. Use the template only when the application is actually an SPA requiring `index.html` fallback:
+A client-side routed Vite SPA may need a fallback for direct subpath navigation/reload. Use:
 
 `templates/vercel/vite-spa-vercel.json`
 
-Copy it to repository root as `vercel.json`.
+Copy it to repository root as `vercel.json`. It includes both the standard `main` / `staging` deployment policy and the SPA fallback.
 
-Do not copy this fallback into applications with real server/API routes or framework-native routing without reviewing its effect, because a catch-all rewrite can mask routes that should be handled elsewhere.
+Do not copy the fallback into applications with real server/API routes or framework-native routing without reviewing its effect, because a catch-all rewrite can mask routes that should be handled elsewhere.
 
-## Preview deployments and third-party OAuth
+## Fixed Staging as the hosted review surface
 
-A Vercel Preview URL does not guarantee that every external integration works in Preview.
+`docs/vercel-fixed-staging.md` is the default non-Production hosted-review companion for Vercel consumers.
 
-For example, Google OAuth Authorized JavaScript origins require exact origins and do not support a wildcard that automatically authorizes every ephemeral `*.vercel.app` Preview URL. An application may therefore have a working Preview UI while OAuth-dependent behavior remains unavailable unless that exact Preview origin is separately authorized.
+The `staging` branch is not release history and is not a shared integration branch. It is a single mutable slot whose ref is moved to an explicitly selected same-repository PR HEAD through the trusted Foundation workflow. The selected SHA is then deployed by normal Vercel Git Integration to the fixed Staging domain.
 
-Document this distinction rather than treating "Preview deployment succeeded" as proof that all external identity integrations are functional.
-
-When exact-origin integration validation is a recurring requirement, layer the optional `docs/vercel-fixed-staging.md` profile on top of this profile. It keeps ordinary PR Preview intact while providing one explicitly selected `staging` branch/domain whose ref is moved to the current PR HEAD.
+This arrangement gives OAuth, webhook, origin-allowlist, mobile review, and other hosted checks one stable origin without creating a new Vercel deployment for every feature-branch push.
 
 ## Custom-domain convention
 
@@ -86,31 +130,21 @@ For applications managed under one owner-controlled domain, use this convention 
 
 - Production: `<app>.<domain>`
 - Fixed Staging: `staging.<app>.<domain>`
-- Ephemeral PR Preview: the Vercel-provided Preview URL
 
 The concrete domain remains owner/application configuration. Record the canonical Production and Fixed Staging URLs in the consuming application's README/deployment documentation and revalidate them after DNS/domain changes.
 
-Do not allocate custom domains for every PR by default. Ephemeral Preview URLs already provide that lifecycle; a stable custom Staging origin exists specifically for integrations or review flows that require a fixed origin.
-
-Vercel/DNS/OAuth allowlists remain external setup. The Foundation fixed-Staging profile owns only the trusted GitHub ref-selection contract.
+Vercel/DNS/OAuth allowlists remain external setup. The Foundation Fixed Staging profile owns the repository-side deployment policy and trusted Staging ref-selection contract; provider/domain configuration remains application-owned.
 
 ## Proven consumer evidence
 
-`ms-credentials-tracker` uses Vercel while retaining the reusable Foundation CI quality gate. It used:
+`ms-credentials-tracker` proved the stable Staging branch-domain model with exact-origin Google OAuth and explicit `staging = PR HEAD` promotion.
 
-- Git-connected PR Preview deployments;
-- `main` Production deployment;
-- a custom Production domain;
-- Vercel-owned `VITE_GOOGLE_CLIENT_ID` build configuration;
-- a minimal SPA rewrite;
-- exact-origin Google OAuth configuration for the Production domain;
-- a fixed `staging` Branch Domain for OAuth/origin-dependent validation while retaining ordinary PR Preview;
-- explicit trusted-main ref promotion of one selected same-repository PR HEAD into the `staging` slot.
-
-This real-consumer evidence is the basis for Vercel Git Integration as the Foundation default hosting profile.
+`auth-flow-lab` later exposed the operational cost of leaving automatic feature/PR Preview deployment enabled: repeated UI-review pushes exhausted the Vercel Hobby deployment quota even though GitHub Actions already supplied quality and rendered-review evidence. That consumer evidence is the basis for making Fixed Staging the default hosted review surface and disabling ordinary feature/PR deployments.
 
 ## References
 
+- Vercel: Git configuration / `git.deploymentEnabled`
+  - https://vercel.com/docs/project-configuration/git-configuration
 - Vercel: Git Integration
   - https://vercel.com/kb/git-integration
 - Vercel: Environments

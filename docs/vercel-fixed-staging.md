@@ -1,15 +1,17 @@
-# Vercel fixed Staging slot profile
+# Vercel Fixed Staging slot profile
 
-This optional extension to `docs/vercel.md` keeps ordinary Vercel PR Preview deployments while adding one stable origin for OAuth, redirect/origin allowlists, webhook callbacks, or other integration checks.
+This profile defines the single hosted non-Production review slot used by the default Vercel hosting contract in `docs/vercel.md`.
 
-It is not a release branch, an integration branch, or a second Production environment.
+It is not a release branch, an integration branch, or a second Production environment. It exists so an explicitly selected same-repository PR HEAD can be deployed to one stable origin without creating Vercel deployments for every feature/PR push.
 
 ## Topology
 
 ```text
-feature/* -> Pull Request -> ordinary Vercel PR Preview
+feature/* -> Pull Request -> Foundation CI / rendered review
                     |
-                    +-> explicit manual request
+                    +-> no Vercel deployment
+                    |
+                    +-> explicit hosted-review request
                               |
                               v
                     read-only request workflow
@@ -31,6 +33,8 @@ main -> Vercel Production -> https://example.com
 
 `staging` is a single mutable validation slot. It does not accumulate merge history. Moving the slot means moving the branch ref directly to the selected PR HEAD SHA.
 
+The consuming repository must also carry the standard `git.deploymentEnabled` policy from `docs/vercel.md`: all branches disabled by default, with only `main` and `staging` enabled. That policy prevents ordinary PR/feature pushes from creating Vercel deployments while allowing the fixed slot and Production to use native Git Integration.
+
 ## Why the workflow is split
 
 A manual `workflow_dispatch` can be invoked against a selectable branch or tag. Therefore a write-enabled workflow must not trust an `if: github.ref == refs/heads/main` check inside the manually selected workflow as its only privilege boundary: a feature branch can contain a modified copy of that workflow.
@@ -48,7 +52,7 @@ The cleanup workflow uses `pull_request_target: closed`, checks out trusted `mai
 
 Preserve these constraints:
 
-- fixed Staging is opt-in per PR, not automatic for every PR;
+- Fixed Staging is opt-in per hosted review, not automatic for every PR push;
 - only open same-repository PRs targeting `main` are deployable;
 - fork PRs are rejected;
 - the manual request workflow has read-only permissions;
@@ -59,7 +63,7 @@ Preserve these constraints:
 - PR code is never executed in GitHub Actions with the publisher's write token;
 - Production secrets are not exposed to branch-scoped Staging Preview configuration.
 
-The selected PR code does execute later in Vercel's Staging Preview deployment. The manual promotion decision is therefore also a Vercel environment trust decision. Give Staging only the configuration required for validation.
+The selected PR code does execute later in Vercel's Staging deployment. The manual promotion decision is therefore also a Vercel environment trust decision. Give Staging only the configuration required for validation.
 
 ## Request ordering and races
 
@@ -102,39 +106,52 @@ Copy these application-owned files:
 - `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`
 - `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`
 
+Also copy the Vercel Git deployment policy:
+
+- `templates/vercel/vercel-git.json` -> `vercel.json`, when no other Vercel configuration is required; or
+- `templates/vercel/vite-spa-vercel.json` -> `vercel.json` for a client-side routed Vite SPA that needs the fallback rewrite.
+
 Then:
 
 1. Create `staging` once from current `main`.
 2. Add repository variable `FIXED_STAGING_URL`, for example `https://staging.example.com`.
-3. Merge the request/publisher/cleanup bootstrap to `main` after normal CI review. Both `workflow_dispatch` and `workflow_run` steady-state behavior depend on the trusted workflow definitions existing on the default branch.
+3. Merge the request/publisher/cleanup bootstrap and repository-owned Vercel deployment policy to `main` after normal CI review. Both `workflow_dispatch` and `workflow_run` steady-state behavior depend on the trusted workflow definitions existing on the default branch.
 4. In Vercel, map a Branch Domain/custom domain to Git branch `staging`.
-5. Configure required Vercel Preview values with a `staging` branch scope.
-6. Register the exact Staging origin with the external integration provider.
+5. Configure required Vercel Preview values with a `staging` branch scope. `staging` is technically a Vercel Preview deployment even though it is the only supported hosted non-Production slot in this Foundation profile.
+6. Register the exact Staging origin with the external integration provider when required.
 7. Validate the first real feature PR through **Actions -> Request PR for Fixed Staging**.
+8. Confirm that an ordinary feature/PR branch push does not create a Vercel deployment.
 
 The PR that introduces this profile cannot prove its own complete default-branch publisher path before the bootstrap merge. Treat that as a one-time bootstrap exception.
 
 ## Normal operation
 
-For a PR that requires stable-origin validation:
+For a PR that needs only normal code/UI review:
 
-1. Run normal CI and ordinary PR Preview review.
+1. Run Foundation CI and any application-owned rendered UI review.
+2. Do not publish a Vercel deployment for the feature/PR branch.
+
+For a PR that needs a hosted browser surface:
+
+1. Ensure normal CI/review evidence is satisfactory for the current PR HEAD.
 2. Open **Request PR for Fixed Staging** in GitHub Actions.
 3. Select `main` and enter the PR number.
 4. The read-only request run emits the bounded request artifact.
 5. The trusted `workflow_run` publisher validates the request and current PR HEAD.
 6. The publisher moves `staging` to that SHA with compare-and-swap semantics.
-7. Vercel Git Integration deploys the branch to the fixed Staging domain.
-8. If the PR receives more commits, submit a new request; Staging is SHA-specific.
+7. Vercel Git Integration deploys `staging` to the fixed Staging domain.
+8. If the PR receives more commits and needs hosted re-validation, submit a new request; Staging is SHA-specific.
 9. On merge/close, cleanup returns the slot to current `main` only if that PR still owns it.
+
+The single-slot model intentionally makes hosted review explicit. Multiple PRs can still be reviewed concurrently through CI/artifacts, but only one selected PR occupies Fixed Staging at a time.
 
 ## Vercel and OAuth configuration
 
-The profile assumes Production remains on the real Production Branch, normally `main`, while `staging` remains a Vercel Preview branch. Ordinary PR Preview continues unchanged.
+Production remains on the real Production Branch, normally `main`, while `staging` remains a Vercel Preview-environment branch. Other branch deployments are disabled by repository `git.deploymentEnabled` policy.
 
 Vercel, DNS, OAuth clients, redirect URIs, and origin allowlists remain application/provider-owned configuration. The consumer may reuse one OAuth client across Production and Staging when appropriate, or separate them when stronger isolation is required.
 
-Browser-prefixed configuration such as Vite `VITE_*` client IDs is public client configuration, not a secret. Sensitive credentials must not be exposed to browser bundles or to arbitrary Staging PR code.
+Browser-prefixed configuration such as Vite `VITE_*` client IDs is public client configuration, not a secret. Sensitive credentials must not be exposed to browser bundles or to Staging PR code.
 
 ## Browser-origin state caveat
 
@@ -154,19 +171,21 @@ The templates assume:
 - request workflow filename: `request-staging.yml`;
 - publisher workflow filename: `deploy-staging.yml`.
 
-If a consumer changes those names, update the corresponding script/workflow constants deliberately.
+If a consumer changes those names, update the corresponding script/workflow constants and its `git.deploymentEnabled` rules deliberately.
 
 The script uses Node.js standard-library/runtime APIs plus Git. It does not require the GitHub CLI or application dependency installation.
 
 ## Proven consumer evidence
 
-`ms-credentials-tracker` proved the core slot model with normal PR Preview, a fixed `staging.credentials.shimabell.dev` branch domain, exact-origin Google OAuth, direct `staging = PR HEAD` ref movement, Vercel Git Integration deployment, and conditional cleanup. The consumer also exposed a real cross-origin `localStorage` issue, which is why the browser-state caveat is part of this profile.
+`ms-credentials-tracker` proved the core slot model with a fixed `staging.credentials.shimabell.dev` branch domain, exact-origin Google OAuth, direct `staging = PR HEAD` ref movement, Vercel Git Integration deployment, and conditional cleanup. The consumer also exposed a real cross-origin `localStorage` issue, which is why the browser-state caveat is part of this profile.
 
-The Foundation version hardens that proof by separating the read-only manual request from the write-enabled trusted publisher and by retaining queued requests explicitly.
+`auth-flow-lab` then demonstrated why the slot should replace automatic feature/PR Preview deployment as the Foundation default: frequent UI-review pushes consumed the Vercel Hobby deployment quota even though GitHub Actions already held the quality/rendered evidence. The revised profile keeps hosted review explicit and bounded.
 
 ## References
 
 - `docs/vercel.md`
+- Vercel: Git configuration / `git.deploymentEnabled`
+  - https://vercel.com/docs/project-configuration/git-configuration
 - GitHub Actions: manually running a workflow
   - https://docs.github.com/actions/managing-workflow-runs/manually-running-a-workflow
 - GitHub Actions: `workflow_run`

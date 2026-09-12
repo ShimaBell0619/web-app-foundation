@@ -13,10 +13,9 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. Use Vercel Git Integration as the default hosting/deployment path for new consumers. Configure an owner-managed Production custom domain when available; if one stable Preview origin is required, layer `docs/vercel-fixed-staging.md` on top rather than replacing normal PR Preview. Document a different hosting choice only when product or platform requirements justify it.
+10. Use Vercel Git Integration as the default hosting/deployment path for new consumers, but restrict automatic Git deployment to `main` and `staging` with repository-owned `git.deploymentEnabled` configuration. Use Fixed Staging as the single hosted non-Production review slot rather than creating per-PR/feature deployments. Document a different hosting choice only when product or platform requirements justify it.
 11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
 12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
-
 
 ## Provenance
 
@@ -155,22 +154,45 @@ The consumer's `AGENTS.md` should keep the high-impact reviewer focus from the F
 
 ## Default Vercel Git integration
 
-For applications that prioritize native Preview deployments and minimal deployment-workflow maintenance:
+For new consumers, use a **two-surface Vercel model**:
+
+- `main` -> Production;
+- `staging` -> Fixed Staging hosted review;
+- every other branch -> no Vercel Git deployment.
+
+Repository configuration is part of the contract. Copy `templates/vercel/vercel-git.json` to `vercel.json`, unless the app is a client-side routed Vite SPA that needs the combined `templates/vercel/vite-spa-vercel.json` template. Both templates define:
+
+```json
+{
+  "git": {
+    "deploymentEnabled": {
+      "*": false,
+      "main": true,
+      "staging": true
+    }
+  }
+}
+```
+
+Vercel treats unspecified branches as deployment-enabled, so the wildcard disable is required. When multiple patterns match, any matching `true` rule allows deployment; that is why `main` and `staging` remain enabled despite `"*": false`.
+
+Adopt the hosting profile as follows:
 
 - connect/import the repository in Vercel;
 - keep the Foundation CI caller as the quality gate;
+- keep normal feature/PR review in GitHub Actions and rendered-review artifacts rather than Vercel deployments;
+- create `staging` from `main` and adopt the trusted Fixed Staging publisher/cleanup profile below;
 - use an owner-managed stable Production domain when available, normally `<app>.<domain>`;
-- use `staging.<app>.<domain>` for Fixed Staging when a stable origin is required; keep ordinary PR previews on Vercel-provided Preview URLs;
-- let Vercel own branch/PR Preview deployment and the configured Production Branch deployment;
-- keep Production/Preview build configuration in the corresponding Vercel environment scopes;
-- add `templates/vercel/vite-spa-vercel.json` only for a client-side routed Vite SPA that needs a catch-all fallback;
-- document third-party identity limitations such as exact OAuth origins separately from deployment success.
+- use `staging.<app>.<domain>` for the fixed hosted review slot;
+- let Vercel own `staging` and the configured Production Branch deployment;
+- keep Production configuration in Production scope and scope Staging Preview configuration specifically to branch `staging`;
+- document third-party identity limitations and exact-origin requirements separately from deployment success.
 
 Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff and the alternative when exact post-CI publish ordering is required.
 
-### Optional fixed Staging slot
+### Fixed Staging slot
 
-When a Vercel consumer needs a stable origin for OAuth or other origin-dependent integration validation, keep normal PR Preview and add `docs/vercel-fixed-staging.md`.
+Fixed Staging is the default hosted non-Production review path for Vercel consumers; it is still used explicitly only when a hosted browser surface is required.
 
 Copy all four app-owned files:
 
@@ -179,9 +201,9 @@ Copy all four app-owned files:
 - `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`;
 - `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`.
 
-Create `staging` from `main`, add `FIXED_STAGING_URL`, then merge the bootstrap workflows to `main` before using the steady-state path. The manual workflow is read-only; its short-lived request artifact is consumed by a write-enabled `workflow_run` publisher that executes from the trusted default-branch context and independently validates the selected PR.
+Create `staging` from `main`, add `FIXED_STAGING_URL`, then merge the bootstrap workflows and `git.deploymentEnabled` policy to `main` before using the steady-state path. The manual workflow is read-only; its short-lived request artifact is consumed by a write-enabled `workflow_run` publisher that executes from the trusted default-branch context and independently validates the selected PR.
 
-Map the Vercel Branch Domain to `staging`, scope only the required Preview configuration to that branch, and register the exact fixed origin with the external provider. The selected PR code later executes in that Vercel environment, so Staging configuration is a separate trust boundary from the GitHub publisher.
+Map the Vercel Branch Domain to `staging`, scope only the required Preview configuration to that branch, and register the exact fixed origin with the external provider when needed. The selected PR code later executes in that Vercel environment, so Staging configuration is a separate trust boundary from the GitHub publisher.
 
 The slot points directly at the selected same-repository PR HEAD and uses compare-and-swap cleanup. Do not merge feature branches into `staging` or treat it as release history.
 
@@ -210,7 +232,7 @@ For convenience-first personal repository fleets, `docs/azure-oidc.md` documents
 Vercel Git Integration is the Foundation default hosting profile. Consumers with a justified alternative should still preserve these provider-independent rules:
 
 - keep required quality CI and deployment status independently visible;
-- do not treat a Preview/hosting check as a substitute for application tests;
+- do not treat a hosting/deployment check as a substitute for application tests;
 - bind privileged release/promotion operations to a known validated source revision when the provider/workflow supports it;
 - document any hosting-native sequence that starts Production deployment before exact-SHA post-merge CI completes;
 - separate unprivileged build/test work from privileged credentials;

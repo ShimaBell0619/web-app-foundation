@@ -50,22 +50,27 @@ The Foundation uses `actions/setup-node` npm download caching, never a `node_mod
 
 ## Default hosting profile
 
-Vercel Git Integration is the default hosting/deployment profile for new web-app consumers. Foundation CI remains the quality gate; Vercel owns branch/PR Preview and Production deployment. Do not add a redundant custom Vercel deployment Action merely to duplicate native Git Integration behavior.
+Vercel Git Integration remains the default hosting/deployment profile for new web-app consumers, but automatic Git deployment is intentionally limited to **`main` and `staging` only**.
+
+- `main` -> Production
+- `staging` -> the single Fixed Staging hosted-review slot
+- feature/fix/ordinary PR branches -> no Vercel deployment
+
+The repository-owned `git.deploymentEnabled` policy is part of the Foundation contract. Use `templates/vercel/vercel-git.json`, or `templates/vercel/vite-spa-vercel.json` when a Vite SPA also needs the client-side routing fallback. Foundation CI and rendered-review artifacts are the normal PR review evidence; promote one selected PR HEAD into `staging` only when a hosted browser origin is actually needed.
 
 For applications under one owner-managed domain, use a stable naming convention when practical:
 
 - Production: `<app>.<domain>`
-- Fixed Staging, when needed: `staging.<app>.<domain>`
-- ordinary ephemeral PR Preview: Vercel-provided Preview URL
+- Fixed Staging: `staging.<app>.<domain>`
 
-Use a fixed Staging domain only when an exact/stable origin is materially required, such as OAuth allowlisting. Do not create per-PR custom-domain automation by default.
+Do not add a redundant custom Vercel deployment Action merely to duplicate native Git Integration behavior, and do not use per-PR hosted deployments as the Foundation default.
 
-See `docs/vercel.md` for the hosting contract and `docs/vercel-fixed-staging.md` for the optional fixed-origin Staging slot.
+See `docs/vercel.md` for the hosting contract and `docs/vercel-fixed-staging.md` for the trusted mutable Staging slot.
 
 ## Operational profiles
 
-- `docs/vercel.md` — default Vercel native Git-integrated Preview/Production hosting profile; no redundant deployment Action.
-- `docs/vercel-fixed-staging.md` — optional fixed-origin, single-PR Staging slot layered on Vercel Git Integration for OAuth/origin-dependent validation.
+- `docs/vercel.md` — default Vercel Git-integrated `main`/`staging` hosting profile with repository-owned branch deployment policy.
+- `docs/vercel-fixed-staging.md` — trusted fixed-origin, single-PR Staging slot used as the default hosted non-Production review surface.
 - `docs/application-releases.md` — optional application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
 - `docs/azure-oidc.md` — optional GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
 
