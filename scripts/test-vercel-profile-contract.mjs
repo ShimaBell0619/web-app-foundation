@@ -22,7 +22,7 @@ function readJson(path) {
 function assertPolicy(path) {
   const config = readJson(path);
   assert.deepEqual(config.git?.deploymentEnabled, {
-    '*': false,
+    '**': false,
     main: true,
     staging: true,
   });
@@ -73,15 +73,30 @@ test('current Vercel profile validates', () => {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 });
 
-test('validator rejects feature/PR deployment being re-enabled by wildcard policy drift', () => {
+test('validator rejects feature/PR deployment being re-enabled by globstar policy drift', () => {
   const dir = makeCopy();
   try {
     mutateJson(dir, 'templates/vercel/vercel-git.json', (config) => {
-      config.git.deploymentEnabled['*'] = true;
+      config.git.deploymentEnabled['**'] = true;
     });
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /disable Git deployment for all branches by default/);
+    assert.match(result.stderr, /slash-containing branches are covered/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('validator rejects the old single-star catch-all that misses slash-containing branches', () => {
+  const dir = makeCopy();
+  try {
+    mutateJson(dir, 'templates/vercel/vite-spa-vercel.json', (config) => {
+      delete config.git.deploymentEnabled['**'];
+      config.git.deploymentEnabled['*'] = false;
+    });
+    const result = runValidator(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /define only \*\*, main, and staging|slash-containing branches/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -95,7 +110,7 @@ test('validator rejects main or staging being removed from the allowed deploymen
     });
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /define only \*, main, and staging|enable Git deployment for staging/);
+    assert.match(result.stderr, /define only \*\*, main, and staging|enable Git deployment for staging/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
