@@ -7,8 +7,8 @@
     "node": "^24.20.0 || >=26.0.0"
   },
   "scripts": {
-    "foundation:validate": "node scripts/validate-foundation.mjs && node scripts/validate-independent-review.mjs && node scripts/validate-ui-profile.mjs && node scripts/validate-ai-implementation.mjs",
-    "foundation:test": "node scripts/test-foundation-validator.mjs && node scripts/test-independent-review-contract.mjs && node scripts/test-ui-profile-contract.mjs && node scripts/test-ai-implementation-contract.mjs",
+    "foundation:validate": "node scripts/validate-foundation.mjs && node scripts/validate-independent-review.mjs && node scripts/validate-ui-profile.mjs && node scripts/validate-ai-implementation.mjs && node scripts/validate-vercel-profile.mjs",
+    "foundation:test": "node scripts/test-foundation-validator.mjs && node scripts/test-independent-review-contract.mjs && node scripts/test-ui-profile-contract.mjs && node scripts/test-ai-implementation-contract.mjs && node scripts/test-vercel-profile-contract.mjs",
     "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
     "foundation:test:application-release": "node scripts/test-application-release-contract.mjs",
     "foundation:test:vercel-staging": "node --test scripts/test-vercel-fixed-staging-contract.mjs scripts/test-vercel-fixed-staging-context.mjs",
