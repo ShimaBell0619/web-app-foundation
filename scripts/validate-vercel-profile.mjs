@@ -73,6 +73,31 @@ for (const [path, text] of Object.entries(docs)) {
   }
 }
 
+const providerGateDocs = ['docs/adoption.md', 'docs/vercel.md', 'docs/vercel-fixed-staging.md'];
+for (const path of providerGateDocs) {
+  const text = docs[path];
+  if (!text.includes('Preview') || !text.includes('Branch Tracking')) {
+    fail(`${path} must document the Vercel Preview Branch Tracking provider-side gate`);
+  }
+  if (!text.includes('post-adoption smoke')) {
+    fail(`${path} must require a post-adoption smoke before the staging-only profile is complete`);
+  }
+}
+
+const vercelContract = docs['docs/vercel.md'];
+for (const marker of [
+  'ordinary feature branch',
+  'no Vercel deployment',
+  '`staging`',
+  'hosted review deployment',
+  '`main`',
+  'Production deployment',
+]) {
+  if (!vercelContract.includes(marker)) {
+    fail(`docs/vercel.md must preserve the three-path post-adoption smoke evidence: ${marker}`);
+  }
+}
+
 const staleMarkers = new Map([
   ['README.md', ['ordinary ephemeral PR Preview', 'optional fixed-origin Staging slot']],
   ['docs/adoption.md', ['keep ordinary PR previews', 'branch/PR Preview deployment', 'keep normal PR Preview']],
