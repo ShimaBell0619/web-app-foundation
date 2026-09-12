@@ -20,7 +20,7 @@ Use:
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "*": false,
+      "**": false,
       "main": true,
       "staging": true
     }
@@ -30,28 +30,29 @@ Use:
 
 Copy `templates/vercel/vercel-git.json` for an application that does not otherwise need Vercel routing configuration. A client-side routed Vite SPA should instead use `templates/vercel/vite-spa-vercel.json`, which carries the same Git deployment policy plus the SPA fallback rewrite.
 
-Vercel documents two details that make this shape important:
+Vercel documents that `git.deploymentEnabled` branch rules use minimatch patterns. Three details matter for this profile:
 
-- branches not mentioned in `git.deploymentEnabled` default to deployment enabled, so the catch-all `"*": false` rule is required;
-- if a branch matches multiple patterns, deployment occurs when at least one matching rule is `true`, so the explicit `main: true` and `staging: true` rules override the catch-all disable for those two branches.
+- branches not matched by `git.deploymentEnabled` default to deployment enabled;
+- minimatch `*` does not span `/`, so it is **not** a safe catch-all for slash-containing branch names such as `feature/foo`, `fix/bar`, or `chore/issue-77-vercel-globstar`;
+- globstar `**` covers slash-containing branch names, while the explicit `main: true` and `staging: true` rules keep those two branches deployable because Vercel deploys when any matching rule is `true`.
+
+The v0.9.0/v0.9.1 profile incorrectly used `"*": false`. That allowed slash-containing branches to miss the disable rule and fall back to Vercel's default deployment-enabled behavior. The required catch-all is therefore `"**": false`.
 
 Do not replace this with an Ignored Build Step merely to suppress feature/PR builds. The intended contract is that those branches do not start a Vercel Git deployment at all.
 
 ## Provider-side adoption gate
 
-Repository configuration is necessary but is **not sufficient adoption evidence**. A real `auth-flow-lab` migration carried the correct `git.deploymentEnabled` policy on `main`, yet a later ordinary feature-branch push still created a Vercel deployment. Treat the Vercel Project environment/branch-tracking state as part of the delivery contract, not as an invisible dashboard assumption.
-
-Before declaring the profile adopted:
+Repository configuration is necessary but runtime behavior is still the final adoption evidence. Vercel Project settings must also support the intended two-surface model:
 
 1. In Vercel Project Settings -> Environments, confirm Production Branch Tracking resolves `main` to Production.
-2. Inspect the Preview environment's Branch Tracking state. The default Foundation profile expects Preview Branch Tracking to be enabled so Git-integrated branch eligibility can be evaluated together with the repository policy. A Vercel Community reproduction reports that disabling Preview Branch Tracking caused `git.deploymentEnabled` to be ignored for preview suppression, while enabling it made the repository policy take effect. Vercel's public Git-configuration docs do not currently describe that interaction as a guaranteed invariant, so the runtime smoke below remains authoritative.
-3. Perform a **post-adoption smoke** after the repository policy is already on `main`:
-   - push a disposable ordinary feature branch commit and verify Vercel creates no deployment/status for that push;
+2. Keep Preview Branch Tracking enabled so the `staging` branch can be deployed through normal Git Integration.
+3. Perform a **post-adoption smoke** after the corrected repository policy is already on `main`:
+   - push a disposable ordinary slash-containing feature branch and verify Vercel creates no deployment/status for that push;
    - move/push `staging` and verify Vercel creates the intended hosted review deployment;
    - push/merge to `main` and verify Vercel creates the Production deployment.
 4. Record any provider-specific setting needed for the project in the consumer's deployment/Foundation provenance document.
 
-If the ordinary feature branch still produces a Vercel deployment, the migration is incomplete even when `vercel.json` is correct. Correct the Vercel Project environment/branch-tracking configuration and repeat the smoke; do not add a parallel deployment pipeline merely to hide the provider-state mismatch.
+`auth-flow-lab` proved that its Preview Branch Tracking was already enabled and Production tracked `main`; the failed suppression was caused by the single-star catch-all, not by disabled Branch Tracking. If an ordinary feature branch still produces a Vercel deployment with the corrected `**` policy, the migration remains incomplete and provider state should be investigated from fresh evidence rather than assuming the prior Branch Tracking hypothesis.
 
 ## Responsibility split
 
@@ -100,14 +101,14 @@ If a product requires the stronger invariant "Production publish cannot start un
 
 1. Import/connect the GitHub repository to Vercel.
 2. Confirm the Production Branch is `main` unless the application deliberately documents another production branch.
-3. Inspect Preview Environment Branch Tracking and configure the project so repository branch-deployment policy is honored; use the post-adoption smoke as the final evidence rather than assuming dashboard state from memory.
-4. Add repository-owned `git.deploymentEnabled` configuration from `templates/vercel/vercel-git.json`, or use the Vite SPA template when its rewrite is required.
+3. Confirm Preview Branch Tracking is enabled for the Preview environment so `staging` can use normal Git Integration.
+4. Add repository-owned `git.deploymentEnabled` configuration from `templates/vercel/vercel-git.json`, or use the Vite SPA template when its rewrite is required. The catch-all must be `"**": false`, not `"*": false`.
 5. Keep the app-owned Foundation CI caller unchanged.
 6. Create `staging` from current `main` and adopt the trusted Fixed Staging slot from `docs/vercel-fixed-staging.md`.
 7. Map the stable Staging Branch Domain/custom domain to `staging`.
 8. Configure Production values in Vercel Production scope and Staging values as branch-scoped Preview configuration for `staging`.
 9. Configure the canonical Production custom domain under an owner-managed domain when available.
-10. Run the post-adoption smoke: ordinary feature branch = no Vercel deployment, `staging` = hosted review deployment, `main` = Production deployment.
+10. Run the post-adoption smoke: ordinary slash-containing feature branch = no Vercel deployment, `staging` = hosted review deployment, `main` = Production deployment.
 11. Treat the profile as adopted only after all three observations match the contract.
 
 ## Environment-variable ownership
@@ -151,13 +152,13 @@ For applications managed under one owner-controlled domain, use this convention 
 
 The concrete domain remains owner/application configuration. Record the canonical Production and Fixed Staging URLs in the consuming application's README/deployment documentation and revalidate them after DNS/domain changes.
 
-Vercel/DNS/OAuth allowlists remain external setup. The Foundation Fixed Staging profile owns the repository-side deployment policy and trusted Staging ref-selection contract; provider/domain configuration remains application-owned but its relevant branch-tracking state is part of adoption evidence.
+Vercel/DNS/OAuth allowlists remain external setup. The Foundation Fixed Staging profile owns the repository-side deployment policy and trusted Staging ref-selection contract; provider/domain configuration remains application-owned and the post-adoption smoke remains required evidence.
 
 ## Proven consumer evidence
 
 `ms-credentials-tracker` proved the stable Staging branch-domain model with exact-origin Google OAuth and explicit `staging = PR HEAD` promotion.
 
-`auth-flow-lab` first demonstrated why the slot should replace automatic feature/PR Preview deployment: repeated UI-review pushes exhausted the Vercel Hobby deployment quota even though GitHub Actions already supplied quality and rendered-review evidence. During v0.9.0 adoption it then exposed a second failure mode: the correct repository `git.deploymentEnabled` policy was present on `main`, but an ordinary feature-branch smoke still created a Vercel deployment. That evidence is why provider-side branch-tracking inspection and a real three-path post-adoption smoke are now mandatory.
+`auth-flow-lab` first demonstrated why the slot should replace automatic feature/PR Preview deployment: repeated UI-review pushes exhausted the Vercel Hobby deployment quota even though GitHub Actions already supplied quality and rendered-review evidence. During adoption it then exposed the wildcard defect: Preview Branch Tracking was enabled and Production tracked `main`, but the v0.9.0/v0.9.1 `"*": false` rule did not suppress slash-containing branches such as `chore/...`. That consumer evidence is why the profile now requires the slash-safe `"**": false` globstar and a three-path post-adoption smoke.
 
 ## References
 
@@ -167,6 +168,6 @@ Vercel/DNS/OAuth allowlists remain external setup. The Foundation Fixed Staging 
   - https://vercel.com/kb/git-integration
 - Vercel: Environments
   - https://vercel.com/kb/environments
-- Vercel Community: `git.deploymentEnabled` and Preview Branch Tracking reproduction
-  - https://community.vercel.com/t/unable-to-remove-preview-deploys/7746
+- minimatch globstar behavior
+  - https://github.com/isaacs/minimatch
 - `docs/vercel-fixed-staging.md`
