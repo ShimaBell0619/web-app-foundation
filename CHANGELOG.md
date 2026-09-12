@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+### Patch Changes
+
+- a7e8d81: Harden the staging-only Vercel adoption contract: repository `git.deploymentEnabled` policy remains the source-controlled intent, but adoption now also requires provider-side Preview Branch Tracking inspection and a post-adoption smoke proving ordinary feature branches do not deploy while `staging` and `main` still do.
+
 ## 0.9.0
 
 ### Minor Changes

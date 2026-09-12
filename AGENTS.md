@@ -1,6 +1,6 @@
 # Web App Foundation — Agent Instructions
 
-Foundation-Version: 0.9.0
+Foundation-Version: 0.9.1
 ## Scope
 
 These rules define the default engineering approach for web applications derived from this repository. Application repositories may add stricter app-specific rules or documented exceptions, but should not silently contradict the Foundation.
