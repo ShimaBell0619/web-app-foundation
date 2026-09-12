@@ -45,6 +45,11 @@ function mutateJson(dir, file, mutator) {
   writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
 }
 
+function mutateText(dir, file, mutator) {
+  const path = join(dir, file);
+  writeFileSync(path, mutator(readFileSync(path, 'utf8')));
+}
+
 function runValidator(dir) {
   return spawnSync(process.execPath, [validatorPath], { cwd: dir, encoding: 'utf8' });
 }
@@ -91,6 +96,30 @@ test('validator rejects main or staging being removed from the allowed deploymen
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /define only \*, main, and staging|enable Git deployment for staging/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('validator rejects removal of the provider-side Branch Tracking gate', () => {
+  const dir = makeCopy();
+  try {
+    mutateText(dir, 'docs/vercel.md', (text) => text.replaceAll('Branch Tracking', 'branch selection'));
+    const result = runValidator(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Preview Branch Tracking provider-side gate/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('validator rejects removal of post-adoption smoke evidence', () => {
+  const dir = makeCopy();
+  try {
+    mutateText(dir, 'docs/adoption.md', (text) => text.replaceAll('post-adoption smoke', 'deployment check'));
+    const result = runValidator(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /post-adoption smoke/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
