@@ -46,35 +46,36 @@ The same profile explicitly rejects overengineering: new abstractions, dependenc
 
 `.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It requires `check`, `typecheck`, `test`, and production `build` by default. Check/typecheck/test can be skipped only through an explicit workflow opt-out with a non-empty reason; build remains mandatory. A small consumer fixture runs the reusable workflow in Foundation CI so GitHub validates the actual shared workflow, not only text markers.
 
-The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence must remain distinct from hosting/deployment status, and applications should document any hosting-native sequencing that does not strictly wait for post-merge CI on the exact Production SHA.
+The workflow validates the triggering `github.sha` by default and can accept an explicit `checkout_ref` from trusted automation when an exact source revision must be proven. The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence remains distinct from hosting/deployment status.
 
 ## Default hosting profile
 
-Vercel Git Integration remains the default hosting/deployment profile for new web-app consumers, but automatic Git deployment is intentionally limited to **`main` and `staging` only**.
+Vercel Git Integration remains the default hosting/deployment profile, but v0.10 changes the hosted-review default to **explicit On-demand Preview**.
 
 - `main` -> Production
-- `staging` -> the single Fixed Staging hosted-review slot
+- `preview/pr-N` -> trusted On-demand Preview source created only after `/preview`
 - feature/fix/ordinary PR branches -> no Vercel deployment
+- `staging` -> optional Fixed Staging only when a stable origin is actually required
 
-The repository-owned `git.deploymentEnabled` policy is part of the Foundation contract. Use `templates/vercel/vercel-git.json`, or `templates/vercel/vite-spa-vercel.json` when a Vite SPA also needs the client-side routing fallback. Foundation CI and rendered-review artifacts are the normal PR review evidence; promote one selected PR HEAD into `staging` only when a hosted browser origin is actually needed.
+The repository-owned `git.deploymentEnabled` policy is part of the contract. Default templates use a slash-safe `"**": false` catch-all, explicitly enable `main`, and re-enable only trusted `preview/**` synthetic refs.
 
-For applications under one owner-managed domain, use a stable naming convention when practical:
+A repository writer requests hosted review by commenting `/preview` on an eligible same-repository PR. The trusted workflow validates exact PR HEAD A with reusable Foundation CI, then creates a content-identical synthetic child B where `parent(B)=A` and `tree(B)=tree(A)`. Vercel Git Integration builds `preview/pr-N`, and the validated real `client_payload.url` is returned to the PR.
 
-- Production: `<app>.<domain>`
-- Fixed Staging: `staging.<app>.<domain>`
+The synthetic-commit exception is limited to non-Production hosted review. Production and versioned Release publication continue to use their real source-SHA contracts. No Vercel API token or Deploy Hook is required by the default Preview path.
 
-Do not add a redundant custom Vercel deployment Action merely to duplicate native Git Integration behavior, and do not use per-PR hosted deployments as the Foundation default.
+Fixed Staging remains supported separately for exact-origin requirements such as OAuth. It is no longer required for every Vercel consumer.
 
-See `docs/vercel.md` for the hosting contract and `docs/vercel-fixed-staging.md` for the trusted mutable Staging slot.
+See `docs/vercel.md` for the overall hosting contract, `docs/vercel-on-demand-preview.md` for the default hosted-review workflow, and `docs/vercel-fixed-staging.md` for the optional stable-origin slot.
 
 ## Operational profiles
 
-- `docs/vercel.md` — default Vercel Git-integrated `main`/`staging` hosting profile with repository-owned branch deployment policy.
-- `docs/vercel-fixed-staging.md` — trusted fixed-origin, single-PR Staging slot used as the default hosted non-Production review surface.
+- `docs/vercel.md` — default Vercel Git-integrated Production + On-demand Preview hosting contract and repository-owned branch policy.
+- `docs/vercel-on-demand-preview.md` — trusted `/preview` flow, exact-source CI, synthetic source identity, stale-event protection, URL feedback, cleanup, and Preview trust boundary.
+- `docs/vercel-fixed-staging.md` — optional fixed-origin single-slot profile for OAuth/webhook/other stable-origin requirements.
 - `docs/application-releases.md` — optional application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
 - `docs/azure-oidc.md` — optional GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
 
-A consumer may document a justified hosting deviation when product or platform requirements demand it, but the Foundation keeps one default hosting path rather than maintaining parallel deployment capabilities without current evidence.
+A consumer may document a justified hosting deviation when product or platform requirements demand it, but the Foundation keeps one default path rather than maintaining automatic per-PR deployments as a competing default.
 
 ## Versioning
 
@@ -85,4 +86,4 @@ A consumer may document a justified hosting deviation when product or platform r
 - `CHANGELOG.md` records released Foundation changes.
 - A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
 
-See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/vercel.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/vercel.md`, `docs/vercel-on-demand-preview.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
