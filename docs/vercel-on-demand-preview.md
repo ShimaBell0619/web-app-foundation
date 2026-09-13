@@ -54,7 +54,7 @@ Copy:
 
 Replace `<FULL_FOUNDATION_COMMIT_SHA>` in the copied workflow with the reviewed full commit SHA of the adopted Foundation release. The reusable workflow remains immutable from the consumer's point of view.
 
-The default Vercel branch policy is:
+The repository-owned `git.deploymentEnabled` policy for the default Vercel profile is:
 
 ```json
 {
@@ -151,7 +151,7 @@ Preview executes PR code in Vercel. Treat Preview configuration as an explicit t
 Repository configuration is necessary but runtime behavior is the acceptance evidence.
 
 1. Confirm Vercel Production Branch Tracking resolves `main` to Production.
-2. Keep the Preview environment able to build the trusted `preview/**` refs created by Git Integration.
+2. Keep Preview Branch Tracking/provider Preview settings able to build the trusted `preview/**` refs created by Git Integration.
 3. Run a post-adoption smoke after the corrected repository policy and workflow are already on `main`:
    - push a disposable ordinary slash-containing branch and confirm no Vercel deployment/status is created;
    - open a same-repository PR, request `/preview`, and confirm the exact-A gate succeeds, Vercel builds `preview/pr-N`, and the real application URL is returned to the PR;
