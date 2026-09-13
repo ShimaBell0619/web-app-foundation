@@ -294,7 +294,13 @@ async function publishStaging(client, repository) {
     '',
     'The `staging` branch uses a content-identical synthetic child commit so ownership remains explicit while Vercel deploys the validated source tree.',
   ].join('\n');
-  await client.commentOnPullRequest(prNumber, comment);
+  try {
+    await client.commentOnPullRequest(prNumber, comment);
+  } catch (error) {
+    console.warn(
+      `Fixed Staging is ready, but PR feedback could not be posted: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   writeSummary([
     '## Fixed Staging ready',
