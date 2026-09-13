@@ -94,9 +94,9 @@ test('publisher resolves A read-only, validates exact A, then mutates Staging', 
 
   const validate = workflow.jobs['validate-source'];
   assert.equal(validate.needs, 'resolve');
-  assert.equal(
+  assert.match(
     validate.uses,
-    'ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@<FULL_FOUNDATION_COMMIT_SHA>',
+    /^ShimaBell0619\/web-app-foundation\/\.github\/workflows\/web-ci\.yml@[0-9a-f]{40}$/,
   );
   assert.equal(validate.with.checkout_ref, '${{ needs.resolve.outputs.source_sha }}');
   assert.equal(validate.secrets, undefined);
