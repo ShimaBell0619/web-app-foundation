@@ -4,7 +4,7 @@
     "deploymentEnabled": {
       "**": false,
       "main": true,
-      "staging": true
+      "preview/**": true
     }
   },
   "rewrites": [

@@ -13,9 +13,13 @@ For a new application:
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
 9. Record Foundation provenance before feature work begins.
-10. Use Vercel Git Integration as the default hosting/deployment path for new consumers, but restrict automatic Git deployment to `main` and `staging` with repository-owned `git.deploymentEnabled` configuration using a slash-safe `"**": false` catch-all. Use Fixed Staging as the single hosted non-Production review slot rather than creating per-PR/feature deployments. Provider-side Preview/Branch Tracking state and a real post-adoption smoke are required evidence that the project actually honors this policy. Document a different hosting choice only when product or platform requirements justify it.
-11. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
-12. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
+10. Use Vercel Git Integration as the default hosting path for new consumers. Repository-owned `git.deploymentEnabled` must use `"**": false`, explicitly enable `main`, and enable only trusted `preview/**` synthetic refs for non-Production hosted review. Ordinary feature/fix/PR branches do not deploy.
+11. Copy the On-demand Preview workflow/helper from `templates/vercel/on-demand-preview/`, replace its Foundation SHA placeholder with the reviewed release commit, and treat `/preview` as an explicit hosted-review request rather than a per-push deployment.
+12. Confirm Vercel Production Branch Tracking resolves `main`, and confirm Preview Branch Tracking/provider Preview settings permit trusted `preview/**` Git Integration refs.
+13. Complete a real post-adoption smoke before declaring the Vercel profile adopted.
+14. Adopt optional Fixed Staging from `docs/vercel-fixed-staging.md` only when a stable non-Production origin is a real requirement. It is not part of the default hosted-review topology.
+15. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
+16. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
 
 ## Provenance
 
@@ -24,7 +28,7 @@ An application should keep a small provenance record, for example in `docs/FOUND
 ```markdown
 # Foundation provenance
 
-- Adopted Foundation version: 0.1.0
+- Adopted Foundation version: 0.10.0
 - Copied-rule/template commit: <full commit SHA>
 - Reusable workflow commit: <full commit SHA>
 - Adopted on: YYYY-MM-DD
@@ -32,7 +36,7 @@ An application should keep a small provenance record, for example in `docs/FOUND
   - <none or explicit deviations>
 ```
 
-Copied rules/templates do not change automatically. Reusable workflows execute the exact commit SHA referenced by the app. Upgrade both deliberately, and read the current provenance before changing Foundation-derived rules or workflow refs.
+Copied rules/templates do not change automatically. Reusable workflows execute the exact commit SHA referenced by the app. Upgrade both deliberately, and read current provenance before changing Foundation-derived rules or workflow refs.
 
 ## Context-routed Chat implementation
 
@@ -53,9 +57,7 @@ Keep the routing index small and repository-specific. A typical consumer starts 
 | Foundation adoption | docs/FOUNDATION.md, target Foundation guidance/change notes |
 ```
 
-Do not create empty documents merely to match this example. Adapt the table to actual repository paths. Matching routes are additive, so a staging OAuth change can require both integration/trust and delivery/operations context.
-
-When a normative specialist document is introduced, renamed, split, or retired, update Context Routing in the same change if future agents need it to find that contract. Issue authors should point to unusual Issue-specific constraints but should not copy full design/architecture contracts into every Issue.
+Do not create empty documents merely to match this example. Matching routes are additive. When a normative specialist document is introduced, renamed, split, or retired, update Context Routing in the same change if future agents need it to find that contract.
 
 For each material Issue, the implementation agent builds a session-local Repository Context Packet, extracts Design Intent, and maps contract/Acceptance Criteria -> implementation surface -> validation evidence before implementation. Do not commit that packet as a permanent context artifact. Repository contracts at the recorded revision remain authoritative.
 
@@ -101,6 +103,8 @@ jobs:
       cache_dependency_path: package-lock.json
 ```
 
+The reusable workflow validates `github.sha` by default. Trusted deployment automation that must prove an exact source revision may pass the optional `checkout_ref` input; ordinary callers should leave it empty.
+
 Example for a JavaScript-only app with no separate type checker:
 
 ```yaml
@@ -117,7 +121,7 @@ Example for a JavaScript-only app with no separate type checker:
 
 ## Rendered UI review
 
-For material user-facing changes, use `docs/ui-review.md` as the review method after the normal quality gate. It defines the product-specific design-direction check, render → critique → fix → re-render loop, 1440px / 390px / 320px baseline, overflow/focus/status review, and Japanese/CJK rendering notes.
+For material user-facing changes, use `docs/ui-review.md` as the review method after the normal quality gate. It defines the product-specific design-direction check, render -> critique -> fix -> re-render loop, 1440px / 390px / 320px baseline, overflow/focus/status review, and Japanese/CJK rendering notes.
 
 The guide is intentionally style-neutral: consumers keep their own visual direction and product-specific assertions in `DESIGN.md` and application tests.
 
@@ -132,35 +136,34 @@ For a new React-oriented browser-first consumer, use `docs/ui-implementation.md`
 - specialist custom CSS remains valid for justified product-specific visualizations/interactions;
 - rendered review evaluates primitive quality and composition quality separately.
 
-Do not force-migrate an existing consumer only for conformity. Non-React consumers or applications with an established accessible design system may use an equivalent mature primitive approach and record the deviation in `DESIGN.md`, `AGENTS.md`, or Foundation provenance as appropriate.
+Do not force-migrate an existing consumer only for conformity. Non-React consumers or applications with an established accessible design system may use an equivalent mature primitive approach and record the deviation as appropriate.
 
 ## Selective independent code review
 
-Consumers should inherit the `AGENTS.md` distinction between mandatory self-review and risk-based independent review. Do not treat a second pass by the implementation agent as independent evidence.
+Consumers inherit the `AGENTS.md` distinction between mandatory self-review and risk-based independent review. Do not treat a second pass by the implementation agent as independent evidence.
 
-When a consumer uses Codex GitHub Code Review as the independent reviewer:
+When Codex GitHub Code Review is used:
 
-- make Code Review available for the repository but keep **Automatic Review / Review my pull requests OFF**;
-- normally wait until implementation, tests, self-review, and relevant CI have produced the intended merge-candidate HEAD;
-- before each `@codex review` invocation, including re-review, present the user/maintainer with the concrete review rationale, affected risk category, and expected value, and obtain explicit approval;
-- only after that approval, request review manually with `@codex review` from the PR conversation;
-- allow low-risk changes to skip the independent review with a recorded reason rather than making Codex a universal required check;
-- reassess Codex findings against the Issue, contracts, diff, tests, and CI rather than accepting them mechanically;
-- consider re-review after Blocker/High corrections or material security, compatibility, CI/CD, deployment, or implementation-path changes, not after every minor edit; a new Codex invocation requires fresh approval.
+- keep Automatic Review / Review my pull requests OFF;
+- wait until implementation, tests, self-review, and relevant CI produce the intended merge-candidate HEAD;
+- before each `@codex review` invocation, including re-review, present the concrete review rationale, affected risk category, and expected value, then obtain explicit approval;
+- every Codex invocation, including re-review, requires fresh approval; an earlier approval does not carry forward;
+- only after that approval, request review manually from the PR conversation;
+- allow low-risk changes to skip independent review with a recorded reason;
+- reassess findings against Issue/contracts/diff/tests/CI rather than accepting them mechanically.
 
-The consumer's `AGENTS.md` should keep the high-impact reviewer focus from the Foundation: requirement mismatch, regressions, failure paths, security/auth boundaries, concurrency/races, compatibility, destructive/data-integrity risk, CI/CD gate bypass, deployment/rollback risk, and operational failure modes. Style/lint noise belongs primarily to deterministic tooling.
-
-`docs/independent-review.md` is the Foundation operating reference. Consumers do not need a new workflow merely to use this method, and the Foundation does not require a Codex status check on every PR.
+`docs/independent-review.md` is the Foundation operating reference.
 
 ## Default Vercel Git integration
 
-For new consumers, use a **two-surface Vercel model**:
+For new consumers, use this default topology:
 
 - `main` -> Production;
-- `staging` -> Fixed Staging hosted review;
-- every other branch -> no Vercel Git deployment.
+- `preview/pr-N` -> explicit On-demand Preview synthetic source;
+- every ordinary feature/fix/PR branch -> no Vercel Git deployment;
+- Fixed Staging -> optional only.
 
-Repository configuration is part of the contract. Copy `templates/vercel/vercel-git.json` to `vercel.json`, unless the app is a client-side routed Vite SPA that needs the combined `templates/vercel/vite-spa-vercel.json` template. Both templates define:
+Copy `templates/vercel/vercel-git.json` to `vercel.json`, unless a client-side routed Vite SPA needs `templates/vercel/vite-spa-vercel.json`. Both default templates define:
 
 ```json
 {
@@ -168,50 +171,53 @@ Repository configuration is part of the contract. Copy `templates/vercel/vercel-
     "deploymentEnabled": {
       "**": false,
       "main": true,
-      "staging": true
+      "preview/**": true
     }
   }
 }
 ```
 
-Vercel treats unmatched branches as deployment-enabled and evaluates branch rules with minimatch. The globstar `**` is required because plain `*` does not span `/`; using `*` would fail to suppress common branch names such as `feature/foo` or `chore/issue-77-vercel-globstar`. When multiple patterns match, any matching `true` rule allows deployment, so `main` and `staging` remain enabled despite the `"**": false` catch-all.
+Vercel evaluates branch rules with minimatch. `**` is required because plain `*` does not span `/`; common branch names such as `feature/foo` would otherwise fall through to Vercel's deployment-enabled default.
 
-Provider settings are still part of adoption evidence, but the real `auth-flow-lab` failure that motivated this correction was **not** caused by disabled Branch Tracking: Preview Branch Tracking was enabled and Production tracked `main`. The failure came from the old single-star wildcard. Complete adoption only after a post-adoption smoke proves effective behavior.
+### On-demand Preview bootstrap
 
-Adopt the hosting profile as follows:
+Copy:
 
-- connect/import the repository in Vercel;
-- keep the Foundation CI caller as the quality gate;
-- keep normal feature/PR review in GitHub Actions and rendered-review artifacts rather than Vercel deployments;
-- confirm Production Branch Tracking uses `main` and Preview Branch Tracking remains enabled for the `staging` Preview deployment;
-- create `staging` from `main` and adopt the trusted Fixed Staging publisher/cleanup profile below;
-- use an owner-managed stable Production domain when available, normally `<app>.<domain>`;
-- use `staging.<app>.<domain>` for the fixed hosted review slot;
-- let Vercel own `staging` and the configured Production Branch deployment;
-- keep Production configuration in Production scope and scope Staging Preview configuration specifically to branch `staging`;
-- document third-party identity limitations and exact-origin requirements separately from deployment success;
-- run a post-adoption smoke after the corrected policy is on `main`: ordinary slash-containing feature branch -> no Vercel deployment, `staging` -> hosted review deployment, `main` -> Production deployment.
+- `templates/vercel/on-demand-preview/preview.yml` -> `.github/workflows/preview.yml`;
+- `templates/vercel/on-demand-preview/on-demand-preview.mjs` -> `scripts/on-demand-preview.mjs`.
 
-If an ordinary feature branch still creates a Vercel deployment with the corrected globstar policy, the profile is not adopted yet. Investigate the provider-side state from fresh evidence and repeat the smoke instead of adding a parallel deployment mechanism.
+Replace `<FULL_FOUNDATION_COMMIT_SHA>` with the reviewed immutable Foundation release SHA.
 
-Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff and the alternative when exact post-CI publish ordering is required.
+The trusted flow resolves exact PR HEAD A, validates A with reusable Foundation CI, then creates content-identical synthetic B with `parent(B)=A` and `tree(B)=tree(A)`. Vercel builds `preview/pr-N`, and the success event's real `client_payload.url` is validated and returned to the PR.
 
-### Fixed Staging slot
+No `VERCEL_TOKEN`, Deploy Hook, or direct Vercel deployment API credential is part of the default contract. If the Vercel project name differs from the repository name, set repository variable `VERCEL_PROJECT_NAME`.
 
-Fixed Staging is the default hosted non-Production review path for Vercel consumers; it is still used explicitly only when a hosted browser surface is required.
+Production credentials and broadly privileged provider identities must not be available to Preview PR code. See `docs/vercel-on-demand-preview.md` for the full trust and source-identity contract.
 
-Copy all four app-owned files:
+### Provider smoke
 
-- `templates/vercel/fixed-staging/request-staging.yml` -> `.github/workflows/request-staging.yml`;
-- `templates/vercel/fixed-staging/deploy-staging.yml` -> `.github/workflows/deploy-staging.yml`;
-- `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`;
-- `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`.
+Complete adoption only after a real post-adoption smoke:
 
-Create `staging` from `main`, add `FIXED_STAGING_URL`, then merge the bootstrap workflows and `git.deploymentEnabled` policy to `main` before using the steady-state path. The manual workflow is read-only; its short-lived request artifact is consumed by a write-enabled `workflow_run` publisher that executes from the trusted default-branch context and independently validates the selected PR.
+- ordinary slash-containing branch -> no Vercel deployment/status;
+- eligible PR + `/preview` -> exact-A validation, trusted `preview/pr-N` deployment, real Preview URL returned;
+- `main` -> Production deployment.
 
-Map the Vercel Branch Domain to `staging`, scope only the required Preview configuration to that branch, and register the exact fixed origin with the external provider when needed. The selected PR code later executes in that Vercel environment, so Staging configuration is a separate trust boundary from the GitHub publisher.
+Static `vercel.json` inspection is not enough.
 
-The slot points directly at the selected same-repository PR HEAD and uses compare-and-swap cleanup. Do not merge feature branches into `staging` or treat it as release history.
+### Optional Fixed Staging
+
+Use `docs/vercel-fixed-staging.md` only when a stable origin is required. Add `"staging": true` to the default `git.deploymentEnabled` map, create the branch, map its stable domain, and copy the four Fixed Staging files.
+
+v0.10.0 hardens the optional slot in two ways:
+
+- the selected exact PR HEAD A must pass reusable Foundation CI before publication;
+- `staging` uses a content-identical synthetic child commit with an explicit PR ownership marker, so close cleanup does not depend on the PR's later close-time HEAD still matching the staged revision.
+
+The copied `deploy-staging.yml` contains a reviewed immutable Foundation full SHA for its exact-source CI call. Replace that pinned full SHA with the reviewed full SHA of the Foundation release the consumer adopts.
+
+The Fixed Staging publisher/cleanup remain serialized and use `--force-with-lease`.
+
+Native Git integration may begin Production deployment before post-merge CI for the exact Production SHA completes. `docs/vercel.md` documents this convenience/strict-gating tradeoff.
 
 ## Optional application GitHub Release flow
 
@@ -243,14 +249,16 @@ Vercel Git Integration is the Foundation default hosting profile. Consumers with
 - document any hosting-native sequence that starts Production deployment before exact-SHA post-merge CI completes;
 - separate unprivileged build/test work from privileged credentials;
 - never execute untrusted PR code in a privileged publish/release context;
-- do not place secrets or privileged state in caches; privileged jobs should avoid caches unless a reviewed design proves they are safe and necessary.
+- do not place secrets or privileged state in caches.
 
 ## Upgrading Foundation
 
 1. Review `CHANGELOG.md` and the diff between the adopted and target Foundation commits.
-2. Identify changes to copied documents/templates separately from reusable workflows.
+2. Identify copied documents/templates separately from reusable workflows.
 3. Preserve app-specific deviations unless an approved change supersedes them.
 4. Update copied rules/templates only where they remain appropriate for the app.
-5. Update the reusable-workflow SHA after review.
-6. Update the provenance record.
+5. Update reusable-workflow SHAs after review.
+6. Update provenance.
 7. Run the application's full validation before merging.
+
+For v0.10.0 specifically, consumers moving from the v0.9.x default should treat the hosted-review change as intentional and breaking: stop enabling `staging` by default, adopt `preview/**` plus the On-demand Preview workflow/helper, and retain Fixed Staging only when the application has a documented fixed-origin requirement.

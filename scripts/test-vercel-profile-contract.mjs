@@ -10,9 +10,12 @@ const files = [
   'README.md',
   'docs/adoption.md',
   'docs/vercel.md',
+  'docs/vercel-on-demand-preview.md',
   'docs/vercel-fixed-staging.md',
   'templates/vercel/vercel-git.json',
   'templates/vercel/vite-spa-vercel.json',
+  'templates/vercel/on-demand-preview/preview.yml',
+  'templates/vercel/on-demand-preview/on-demand-preview.mjs',
 ];
 
 function readJson(path) {
@@ -24,7 +27,7 @@ function assertPolicy(path) {
   assert.deepEqual(config.git?.deploymentEnabled, {
     '**': false,
     main: true,
-    staging: true,
+    'preview/**': true,
   });
 }
 
@@ -54,11 +57,11 @@ function runValidator(dir) {
   return spawnSync(process.execPath, [validatorPath], { cwd: dir, encoding: 'utf8' });
 }
 
-test('generic Vercel template deploys only main and staging', () => {
+test('generic Vercel template enables only main and trusted preview refs', () => {
   assertPolicy('templates/vercel/vercel-git.json');
 });
 
-test('Vite SPA Vercel template keeps the same deployment policy and fallback', () => {
+test('Vite SPA Vercel template keeps the default policy and fallback', () => {
   assertPolicy('templates/vercel/vite-spa-vercel.json');
   const config = readJson('templates/vercel/vite-spa-vercel.json');
   assert.ok(
@@ -73,7 +76,7 @@ test('current Vercel profile validates', () => {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 });
 
-test('validator rejects feature/PR deployment being re-enabled by globstar policy drift', () => {
+test('validator rejects ordinary branch deployment being re-enabled', () => {
   const dir = makeCopy();
   try {
     mutateJson(dir, 'templates/vercel/vercel-git.json', (config) => {
@@ -81,13 +84,13 @@ test('validator rejects feature/PR deployment being re-enabled by globstar polic
     });
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /slash-containing branches are covered/);
+    assert.match(result.stderr, /slash-containing branches|ordinary Git deployment/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('validator rejects the old single-star catch-all that misses slash-containing branches', () => {
+test('validator rejects old single-star catch-all', () => {
   const dir = makeCopy();
   try {
     mutateJson(dir, 'templates/vercel/vite-spa-vercel.json', (config) => {
@@ -96,33 +99,47 @@ test('validator rejects the old single-star catch-all that misses slash-containi
     });
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /define only \*\*, main, and staging|slash-containing branches/);
+    assert.match(result.stderr, /define only \*\*, main, and preview\/\*\*|slash-containing/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('validator rejects main or staging being removed from the allowed deployment set', () => {
+test('validator rejects preview refs being disabled', () => {
   const dir = makeCopy();
   try {
-    mutateJson(dir, 'templates/vercel/vite-spa-vercel.json', (config) => {
-      delete config.git.deploymentEnabled.staging;
+    mutateJson(dir, 'templates/vercel/vercel-git.json', (config) => {
+      config.git.deploymentEnabled['preview/**'] = false;
     });
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /define only \*\*, main, and staging|enable Git deployment for staging/);
+    assert.match(result.stderr, /trusted preview\/\*\* refs/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('validator rejects removal of the provider-side Branch Tracking gate', () => {
+test('validator rejects staging being reintroduced into the default template', () => {
+  const dir = makeCopy();
+  try {
+    mutateJson(dir, 'templates/vercel/vercel-git.json', (config) => {
+      config.git.deploymentEnabled.staging = true;
+    });
+    const result = runValidator(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /must not enable optional Fixed Staging|define only/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('validator rejects removal of provider-side Branch Tracking gate', () => {
   const dir = makeCopy();
   try {
     mutateText(dir, 'docs/vercel.md', (text) => text.replaceAll('Branch Tracking', 'branch selection'));
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Preview Branch Tracking provider-side gate/);
+    assert.match(result.stderr, /Preview\/Branch Tracking provider-side gate/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -135,6 +152,18 @@ test('validator rejects removal of post-adoption smoke evidence', () => {
     const result = runValidator(dir);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /post-adoption smoke/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('validator rejects loss of Fixed Staging optionality', () => {
+  const dir = makeCopy();
+  try {
+    mutateText(dir, 'docs/vercel-fixed-staging.md', (text) => text.replace('**optional**', '**required**'));
+    const result = runValidator(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /optional-profile hardening marker/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
