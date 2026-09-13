@@ -15,10 +15,11 @@ For a new application:
 9. Record Foundation provenance before feature work begins.
 10. Use Vercel Git Integration as the default hosting path for new consumers. Repository-owned `git.deploymentEnabled` must use `"**": false`, explicitly enable `main`, and enable only trusted `preview/**` synthetic refs for non-Production hosted review. Ordinary feature/fix/PR branches do not deploy.
 11. Copy the On-demand Preview workflow/helper from `templates/vercel/on-demand-preview/`, replace its Foundation SHA placeholder with the reviewed release commit, and treat `/preview` as an explicit hosted-review request rather than a per-push deployment.
-12. Complete a real post-adoption smoke before declaring the Vercel profile adopted.
-13. Adopt optional Fixed Staging from `docs/vercel-fixed-staging.md` only when a stable non-Production origin is a real requirement. It is not part of the default hosted-review topology.
-14. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
-15. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
+12. Confirm Vercel Production Branch Tracking resolves `main`, and confirm Preview Branch Tracking/provider Preview settings permit trusted `preview/**` Git Integration refs.
+13. Complete a real post-adoption smoke before declaring the Vercel profile adopted.
+14. Adopt optional Fixed Staging from `docs/vercel-fixed-staging.md` only when a stable non-Production origin is a real requirement. It is not part of the default hosted-review topology.
+15. If the application will publish versioned GitHub Releases, adopt `docs/application-releases.md` and copy `templates/release/release.yml` before the first milestone that requires release evidence.
+16. If GitHub Actions must operate Azure resources, use `docs/azure-oidc.md` to define the Microsoft Entra FIC and Azure RBAC trust boundaries before adding deployment/destructive workflows.
 
 ## Provenance
 
@@ -146,6 +147,7 @@ When Codex GitHub Code Review is used:
 - keep Automatic Review / Review my pull requests OFF;
 - wait until implementation, tests, self-review, and relevant CI produce the intended merge-candidate HEAD;
 - before each `@codex review` invocation, including re-review, present the concrete review rationale, affected risk category, and expected value, then obtain explicit approval;
+- every Codex invocation, including re-review, requires fresh approval; an earlier approval does not carry forward;
 - only after that approval, request review manually from the PR conversation;
 - allow low-risk changes to skip independent review with a recorded reason;
 - reassess findings against Issue/contracts/diff/tests/CI rather than accepting them mechanically.
@@ -210,6 +212,8 @@ v0.10.0 hardens the optional slot in two ways:
 
 - the selected exact PR HEAD A must pass reusable Foundation CI before publication;
 - `staging` uses a content-identical synthetic child commit with an explicit PR ownership marker, so close cleanup does not depend on the PR's later close-time HEAD still matching the staged revision.
+
+The copied `deploy-staging.yml` contains a reviewed immutable Foundation full SHA for its exact-source CI call. Replace that pinned full SHA with the reviewed full SHA of the Foundation release the consumer adopts.
 
 The Fixed Staging publisher/cleanup remain serialized and use `--force-with-lease`.
 
