@@ -1,7 +1,5 @@
-import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { appendFile } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const API_VERSION = '2022-11-28';
 const MAIN_BRANCH = 'main';
@@ -16,9 +14,7 @@ function requireValue(value, name) {
 
 export function parsePrNumber(value) {
   const normalized = requireValue(value, 'PR number');
-  if (!/^[1-9][0-9]*$/.test(normalized)) {
-    throw new Error(`Invalid PR number: ${normalized}`);
-  }
+  if (!/^[1-9][0-9]*$/.test(normalized)) throw new Error(`Invalid PR number: ${normalized}`);
   return Number(normalized);
 }
 
@@ -64,22 +60,15 @@ export function validateDeployablePullRequest(pullRequest, repository) {
 export function newerManualRunExists(currentRunId, workflowRuns) {
   const current = BigInt(requireValue(currentRunId, 'request run ID'));
   return workflowRuns.some((run) => {
-    if (
-      run?.event !== 'workflow_dispatch' ||
-      run?.head_branch !== MAIN_BRANCH ||
-      run?.id == null
-    ) return false;
+    if (run?.event !== 'workflow_dispatch' || run?.head_branch !== MAIN_BRANCH || run?.id == null) {
+      return false;
+    }
     try {
       return BigInt(String(run.id)) > current;
     } catch {
       return false;
     }
   });
-}
-
-export function shouldCleanupStaging(currentStagingSha, closedPrHeadSha) {
-  return assertSha(currentStagingSha, 'current Staging SHA') ===
-    assertSha(closedPrHeadSha, 'closed PR HEAD SHA');
 }
 
 export function buildStagingPushArgs(targetSha, expectedSha) {
@@ -91,6 +80,40 @@ export function buildStagingPushArgs(targetSha, expectedSha) {
     `${target}:refs/heads/${STAGING_BRANCH}`,
     `--force-with-lease=refs/heads/${STAGING_BRANCH}:${expected}`,
   ];
+}
+
+export function sourceMarkers(message, prNumber, sourceSha) {
+  return (
+    String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${prNumber}`) &&
+    String(message ?? '').includes(`Source-PR-HEAD: ${sourceSha}`)
+  );
+}
+
+export function stagingOwnershipMatches(message, prNumber) {
+  return String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${parsePrNumber(prNumber)}`);
+}
+
+function setOutput(name, value) {
+  appendFileSync(requireValue(process.env.GITHUB_OUTPUT, 'GITHUB_OUTPUT'), `${name}=${value}\n`);
+}
+
+function writeSummary(lines) {
+  const path = process.env.GITHUB_STEP_SUMMARY;
+  if (path) appendFileSync(path, `${lines.join('\n')}\n`, 'utf8');
+}
+
+function git(args, { env = {}, input } = {}) {
+  try {
+    return execFileSync('git', args, {
+      encoding: 'utf8',
+      env: { ...process.env, ...env },
+      input,
+      stdio: input === undefined ? ['ignore', 'pipe', 'pipe'] : ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch (error) {
+    const stderr = error?.stderr ? String(error.stderr) : String(error);
+    throw new Error(`git ${args.join(' ')} failed: ${stderr}`);
+  }
 }
 
 export function createGitHubClient({
@@ -125,10 +148,9 @@ export function createGitHubClient({
       }
     }
     if (!response.ok) {
-      const detail =
-        typeof payload === 'object' && payload?.message
-          ? payload.message
-          : String(payload ?? response.statusText);
+      const detail = typeof payload === 'object' && payload?.message
+        ? payload.message
+        : String(payload ?? response.statusText);
       throw new Error(`GitHub API ${response.status}: ${detail}`);
     }
     return payload;
@@ -158,127 +180,176 @@ export function createGitHubClient({
   };
 }
 
-function defaultRunGit(args) {
-  const result = spawnSync('git', args, { encoding: 'utf8' });
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-  return result.status === 0;
-}
-
-async function writeSummary(lines, summaryPath = process.env.GITHUB_STEP_SUMMARY) {
-  if (!summaryPath) return;
-  await appendFile(summaryPath, `${lines.join('\n')}\n`, 'utf8');
-}
-
-async function fetchCommit(runGit, sha) {
-  if (!runGit(['fetch', '--no-tags', 'origin', assertSha(sha)])) {
-    throw new Error(`Failed to fetch target commit ${sha}.`);
-  }
+async function resolveRequest(client, repository) {
+  const requestRunId = requireValue(process.env.STAGING_REQUEST_RUN_ID, 'STAGING_REQUEST_RUN_ID');
+  const requestFile = requireValue(process.env.STAGING_REQUEST_FILE, 'STAGING_REQUEST_FILE');
+  const prNumber = parseStagingRequest(readFileSync(requestFile, 'utf8'), {
+    requestRunId,
+    repository,
+  });
+  const pr = await client.getPullRequest(prNumber);
+  const sourceSha = validateDeployablePullRequest(pr, repository);
+  setOutput('pr_number', prNumber);
+  setOutput('source_sha', sourceSha);
 }
 
 async function isSuperseded(client, workflowFile, runId) {
-  const runs = await client.listManualRuns(workflowFile);
-  return newerManualRunExists(runId, runs);
+  return newerManualRunExists(runId, await client.listManualRuns(workflowFile));
 }
 
-export async function deployToStaging({
-  client,
-  repository,
-  prNumber,
-  workflowFile,
-  runId,
-  githubRef,
-  runGit = defaultRunGit,
-}) {
-  if (githubRef !== 'refs/heads/main') {
-    throw new Error('Privileged Staging publisher must run from main.');
+async function publishStaging(client, repository) {
+  const prNumber = parsePrNumber(process.env.PR_NUMBER);
+  const sourceSha = assertSha(process.env.SOURCE_SHA, 'SOURCE_SHA');
+  const requestRunId = requireValue(process.env.STAGING_REQUEST_RUN_ID, 'STAGING_REQUEST_RUN_ID');
+  const workflowFile = requireValue(process.env.STAGING_REQUEST_WORKFLOW_FILE, 'STAGING_REQUEST_WORKFLOW_FILE');
+  const stagingUrl = requireValue(process.env.STAGING_URL, 'STAGING_URL');
+
+  if (await isSuperseded(client, workflowFile, requestRunId)) {
+    writeSummary([
+      '## Fixed Staging',
+      '',
+      `Request run ${requestRunId} was superseded by a newer main-branch request.`,
+      'No Staging ref change was made.',
+    ]);
+    return;
   }
 
-  const initialPr = await client.getPullRequest(prNumber);
-  const targetSha = validateDeployablePullRequest(initialPr, repository);
-
-  if (await isSuperseded(client, workflowFile, runId)) {
-    return { status: 'superseded', targetSha };
+  let pr = await client.getPullRequest(prNumber);
+  if (validateDeployablePullRequest(pr, repository) !== sourceSha) {
+    throw new Error('PR HEAD changed after exact-source validation; request Fixed Staging again.');
   }
 
-  await fetchCommit(runGit, targetSha);
+  git(['fetch', '--no-tags', 'origin', sourceSha]);
+  const sourceTree = git(['show', '-s', '--format=%T', sourceSha]);
+  const sourceAuthorName = git(['show', '-s', '--format=%an', sourceSha]);
+  const sourceAuthorEmail = git(['show', '-s', '--format=%ae', sourceSha]);
+  const observed = await client.getRef(STAGING_BRANCH);
+  git(['fetch', '--no-tags', 'origin', observed]);
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    if (await isSuperseded(client, workflowFile, runId)) {
-      return { status: 'superseded', targetSha };
+  const existingParent = git(['show', '-s', '--format=%P', observed]);
+  const existingTree = git(['show', '-s', '--format=%T', observed]);
+  const existingMessage = git(['show', '-s', '--format=%B', observed]);
+
+  let syntheticSha = observed;
+  let reused = false;
+  if (
+    existingParent === sourceSha &&
+    existingTree === sourceTree &&
+    sourceMarkers(existingMessage, prNumber, sourceSha)
+  ) {
+    reused = true;
+  } else {
+    const message = [
+      `Foundation Fixed Staging for PR #${prNumber}`,
+      '',
+      `Foundation-Fixed-Staging-PR: ${prNumber}`,
+      `Source-PR-HEAD: ${sourceSha}`,
+    ].join('\n');
+    syntheticSha = git(['commit-tree', sourceTree, '-p', sourceSha], {
+      input: `${message}\n`,
+      env: {
+        GIT_AUTHOR_NAME: sourceAuthorName,
+        GIT_AUTHOR_EMAIL: sourceAuthorEmail,
+        GIT_COMMITTER_NAME: 'github-actions[bot]',
+        GIT_COMMITTER_EMAIL: '41898282+github-actions[bot]@users.noreply.github.com',
+      },
+    });
+
+    if (git(['show', '-s', '--format=%P', syntheticSha]) !== sourceSha) {
+      throw new Error('Fixed Staging synthetic commit must have source A as its single parent.');
+    }
+    if (git(['show', '-s', '--format=%T', syntheticSha]) !== sourceTree) {
+      throw new Error('Fixed Staging synthetic commit tree must equal source A tree.');
+    }
+    git(['diff', '--quiet', sourceSha, syntheticSha]);
+
+    if (await isSuperseded(client, workflowFile, requestRunId)) {
+      writeSummary([
+        '## Fixed Staging',
+        '',
+        `Request run ${requestRunId} was superseded before mutation.`,
+        'No Staging ref change was made.',
+      ]);
+      return;
     }
 
-    const latestPr = await client.getPullRequest(prNumber);
-    const latestSha = validateDeployablePullRequest(latestPr, repository);
-    if (latestSha !== targetSha) {
-      throw new Error(
-        `PR HEAD changed while preparing Staging: ${targetSha} -> ${latestSha}. Run the request again.`,
-      );
+    pr = await client.getPullRequest(prNumber);
+    if (validateDeployablePullRequest(pr, repository) !== sourceSha) {
+      throw new Error('PR HEAD changed before Staging mutation; request Fixed Staging again.');
     }
 
-    const expectedStagingSha = await client.getRef(STAGING_BRANCH);
-    if (expectedStagingSha === targetSha) {
-      return { status: 'deployed', targetSha, alreadyCurrent: true };
-    }
-
-    if (runGit(buildStagingPushArgs(targetSha, expectedStagingSha))) {
-      const verified = await client.getRef(STAGING_BRANCH);
-      if (verified !== targetSha) {
-        throw new Error(`Staging verification failed: expected ${targetSha}, found ${verified}.`);
-      }
-      return { status: 'deployed', targetSha, alreadyCurrent: false };
-    }
-
-    const afterFailure = await client.getRef(STAGING_BRANCH);
-    if (afterFailure === targetSha) {
-      return { status: 'deployed', targetSha, alreadyCurrent: true };
-    }
-    if (attempt === 3) {
-      throw new Error(
-        'Staging changed concurrently three times; no unsafe force update was attempted without a lease.',
-      );
-    }
+    git(buildStagingPushArgs(syntheticSha, observed));
+    const verified = await client.getRef(STAGING_BRANCH);
+    if (verified !== syntheticSha) throw new Error('Fixed Staging ref verification failed.');
   }
 
-  throw new Error('Unexpected Staging deployment state.');
+  const comment = [
+    reused ? 'Fixed Staging already matches this PR source.' : 'Fixed Staging updated.',
+    '',
+    `- URL: ${stagingUrl}`,
+    `- PR: #${prNumber}`,
+    `- Source: \`${sourceSha}\``,
+    `- Deployment commit: \`${syntheticSha}\``,
+    '',
+    'The `staging` branch uses a content-identical synthetic child commit so ownership remains explicit while Vercel deploys the validated source tree.',
+  ].join('\n');
+  await client.commentOnPullRequest(prNumber, comment);
+
+  writeSummary([
+    '## Fixed Staging ready',
+    '',
+    `- PR: #${prNumber}`,
+    `- Source A: \`${sourceSha}\``,
+    `- Synthetic B: \`${syntheticSha}\``,
+    `- URL: ${stagingUrl}`,
+    `- Reused: ${reused}`,
+  ]);
 }
 
-export async function cleanupStaging({
-  client,
-  repository,
-  closedPrNumber,
-  closedPrHeadRepo,
-  closedPrHeadSha,
-  runGit = defaultRunGit,
-}) {
-  if (closedPrHeadRepo !== repository) {
-    return { status: 'skipped-fork' };
-  }
+async function cleanupStaging(client, repository) {
+  const prNumber = parsePrNumber(process.env.CLOSED_PR_NUMBER);
+  const headRepo = requireValue(process.env.CLOSED_PR_HEAD_REPO, 'CLOSED_PR_HEAD_REPO');
+  if (headRepo !== repository) return;
 
-  const prHeadSha = assertSha(closedPrHeadSha, 'closed PR HEAD SHA');
-  const currentStagingSha = await client.getRef(STAGING_BRANCH);
-  if (!shouldCleanupStaging(currentStagingSha, prHeadSha)) {
-    return { status: 'skipped-newer-staging', currentStagingSha };
+  const observed = await client.getRef(STAGING_BRANCH);
+  git(['fetch', '--no-tags', 'origin', observed]);
+  const message = git(['show', '-s', '--format=%B', observed]);
+  if (!stagingOwnershipMatches(message, prNumber)) {
+    writeSummary([
+      '## Fixed Staging cleanup skipped',
+      '',
+      `Closed PR: #${prNumber}`,
+      'Current Staging is owned by another source or is already reset.',
+    ]);
+    return;
   }
 
   const mainSha = await client.getRef(MAIN_BRANCH);
-  await fetchCommit(runGit, mainSha);
-
-  if (!runGit(buildStagingPushArgs(mainSha, prHeadSha))) {
-    const afterFailure = await client.getRef(STAGING_BRANCH);
-    if (afterFailure !== prHeadSha) {
-      return { status: 'skipped-race', currentStagingSha: afterFailure };
+  git(['fetch', '--no-tags', 'origin', mainSha]);
+  try {
+    git(buildStagingPushArgs(mainSha, observed));
+  } catch (error) {
+    const current = await client.getRef(STAGING_BRANCH);
+    if (current !== observed) {
+      writeSummary([
+        '## Fixed Staging cleanup skipped',
+        '',
+        `Closed PR: #${prNumber}`,
+        `Staging changed concurrently to \`${current}\`; the newer occupant was preserved.`,
+      ]);
+      return;
     }
-    throw new Error(
-      `Failed to reset Staging for closed PR #${closedPrNumber}; Staging still points to ${prHeadSha}.`,
-    );
+    throw error;
   }
 
   const verified = await client.getRef(STAGING_BRANCH);
-  if (verified !== mainSha) {
-    throw new Error(`Staging cleanup verification failed: expected ${mainSha}, found ${verified}.`);
-  }
-  return { status: 'cleaned', mainSha };
+  if (verified !== mainSha) throw new Error('Fixed Staging cleanup verification failed.');
+  writeSummary([
+    '## Fixed Staging cleaned up',
+    '',
+    `Closed PR: #${prNumber}`,
+    `Staging reset to main SHA \`${mainSha}\`.`,
+  ]);
 }
 
 async function main() {
@@ -290,120 +361,13 @@ async function main() {
     apiUrl: process.env.GITHUB_API_URL,
   });
 
-  if (command === 'deploy') {
-    const requestRunId = requireValue(
-      process.env.STAGING_REQUEST_RUN_ID,
-      'STAGING_REQUEST_RUN_ID',
-    );
-    const requestFile = requireValue(
-      process.env.STAGING_REQUEST_FILE,
-      'STAGING_REQUEST_FILE',
-    );
-    const prNumber = parseStagingRequest(readFileSync(requestFile, 'utf8'), {
-      requestRunId,
-      repository,
-    });
-    const stagingUrl = requireValue(process.env.STAGING_URL, 'STAGING_URL');
-    const workflowFile = requireValue(
-      process.env.STAGING_REQUEST_WORKFLOW_FILE,
-      'STAGING_REQUEST_WORKFLOW_FILE',
-    );
-    const result = await deployToStaging({
-      client,
-      repository,
-      prNumber,
-      workflowFile,
-      runId: requestRunId,
-      githubRef: process.env.GITHUB_REF,
-    });
-
-    if (result.status === 'superseded') {
-      console.log(`A newer main-branch Staging request exists; request ${requestRunId} will not move Staging.`);
-      await writeSummary([
-        '## Fixed Staging',
-        '',
-        `Request run ${requestRunId} was superseded by a newer main-branch request.`,
-        'No Staging ref change was made by this publisher run.',
-      ]);
-      return;
-    }
-
-    const runUrl = `${process.env.GITHUB_SERVER_URL}/${repository}/actions/runs/${requestRunId}`;
-    const comment = [
-      'Fixed Staging updated.',
-      '',
-      `- URL: ${stagingUrl}`,
-      `- PR: #${prNumber}`,
-      `- SHA: \`${result.targetSha}\``,
-      `- Request workflow: ${runUrl}`,
-      '',
-      'This moves only the `staging` branch pointer. The hosting Git Integration performs the actual deployment.',
-    ].join('\n');
-
-    try {
-      await client.commentOnPullRequest(prNumber, comment);
-    } catch (error) {
-      console.warn(
-        `Staging was updated, but the PR comment could not be posted: ${
-          error instanceof Error ? error.message : error
-        }`,
-      );
-    }
-
-    await writeSummary([
-      '## Fixed Staging deployed',
-      '',
-      `- PR: #${prNumber}`,
-      `- SHA: \`${result.targetSha}\``,
-      `- URL: ${stagingUrl}`,
-      `- Request run: ${requestRunId}`,
-    ]);
-    console.log(`Staging now points to ${result.targetSha}.`);
-    return;
-  }
-
-  if (command === 'cleanup') {
-    const closedPrNumber = parsePrNumber(process.env.CLOSED_PR_NUMBER);
-    const result = await cleanupStaging({
-      client,
-      repository,
-      closedPrNumber,
-      closedPrHeadRepo: requireValue(
-        process.env.CLOSED_PR_HEAD_REPO,
-        'CLOSED_PR_HEAD_REPO',
-      ),
-      closedPrHeadSha: process.env.CLOSED_PR_HEAD_SHA,
-    });
-
-    if (result.status === 'cleaned') {
-      await writeSummary([
-        '## Fixed Staging cleaned up',
-        '',
-        `Closed PR: #${closedPrNumber}`,
-        `Staging reset to main SHA \`${result.mainSha}\`.`,
-      ]);
-      console.log(`Staging reset to main ${result.mainSha}.`);
-    } else {
-      await writeSummary([
-        '## Fixed Staging cleanup skipped',
-        '',
-        `Closed PR: #${closedPrNumber}`,
-        `Reason: ${result.status}.`,
-        'No Staging ref change was made.',
-      ]);
-      console.log(`Cleanup skipped: ${result.status}.`);
-    }
-    return;
-  }
-
+  if (command === 'resolve') return resolveRequest(client, repository);
+  if (command === 'deploy') return publishStaging(client, repository);
+  if (command === 'cleanup') return cleanupStaging(client, repository);
   throw new Error(`Unknown staging-slot command: ${command ?? '<missing>'}`);
 }
 
-const invokedDirectly =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedDirectly) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
-}
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});
