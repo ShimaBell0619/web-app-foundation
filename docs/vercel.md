@@ -64,7 +64,7 @@ No Vercel token, Deploy Hook, or direct Vercel deployment API credential is requ
 
 ## Exact-source quality boundary
 
-The normal GitHub pull-request workflow may validate a merge commit. Hosted review needs stronger source binding: the reusable `web-ci.yml` accepts an optional `checkout_ref`, and On-demand Preview passes the exact current PR HEAD A.
+The normal GitHub pull-request workflow may validate a merge commit. Hosted review needs stronger source binding: the reusable `web-ci.yml` accepts an optional `checkout_ref`, and On-demand Preview passes the **exact PR HEAD A** as that source.
 
 The exact-A job is unprivileged. The later write-enabled publisher checks out trusted `main` automation only, fetches A as a Git object, verifies the PR still points to A, and never executes PR code with its write token.
 
@@ -95,7 +95,7 @@ Use minimum Preview-scoped configuration. Browser-prefixed client values such as
 Static repository configuration is necessary but not sufficient. Complete adoption only after runtime evidence shows the provider honors the intended topology.
 
 1. Confirm Production Branch Tracking resolves `main` to Production.
-2. Confirm the Preview environment can build trusted `preview/**` refs through normal Git Integration.
+2. Confirm Preview Branch Tracking/provider Preview settings can build trusted `preview/**` refs through normal Git Integration.
 3. Run a **post-adoption smoke** after the policy and trusted Preview workflow are on `main`:
    - disposable ordinary slash-containing branch -> no Vercel deployment/status;
    - `/preview` on an eligible PR -> exact-A validation, `preview/pr-N` deployment, and real application URL returned to the PR;
