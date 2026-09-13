@@ -128,7 +128,7 @@ Then:
 1. Start from the default On-demand Preview `vercel.json` and add `"staging": true` to `git.deploymentEnabled`.
 2. Create `staging` once from current `main`.
 3. Add repository variable `FIXED_STAGING_URL` with the exact stable Staging origin.
-4. Replace `<FULL_FOUNDATION_COMMIT_SHA>` in copied `deploy-staging.yml` with the reviewed released Foundation commit SHA.
+4. The copied `deploy-staging.yml` contains a reviewed immutable Foundation full SHA for exact-source CI. Replace that pinned full SHA with the reviewed full SHA of the Foundation release the consumer adopts.
 5. Merge the trusted workflows/helper to `main` before first use.
 6. In Vercel, map the stable Branch Domain/custom domain to Git branch `staging`.
 7. Configure only the minimum Preview values required by `staging`; it is technically a Vercel Preview-environment branch.
