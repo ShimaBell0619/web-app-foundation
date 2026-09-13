@@ -7,6 +7,11 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: fixed-staging-deploy-slot
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   cleanup:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
@@ -16,9 +21,9 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
       CLOSED_PR_NUMBER: ${{ github.event.pull_request.number }}
       CLOSED_PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-      CLOSED_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
     steps:
       - name: Checkout trusted main automation
@@ -33,5 +38,5 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: Reset Staging only when it still points to the closed PR
+      - name: Reset Staging only when the closed PR still owns the slot
         run: node scripts/staging-slot.mjs cleanup
