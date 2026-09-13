@@ -8,10 +8,14 @@ const workflow = parseYaml(readFileSync('.github/workflows/web-ci.yml', 'utf8'))
 const verifySteps = workflow.jobs?.verify?.steps ?? [];
 const checkout = verifySteps.find((step) => step?.name === 'Checkout');
 const contract = verifySteps.find((step) => step?.name === 'Validate npm script contract');
+const checkoutRefInput = workflow.on?.workflow_call?.inputs?.checkout_ref;
 
 if (!checkout) throw new Error('could not locate reusable CI checkout step');
-if (checkout.with?.ref !== '${{ github.sha }}') {
-  throw new Error('reusable CI must checkout the exact workflow-run SHA');
+if (!checkoutRefInput || checkoutRefInput.type !== 'string' || checkoutRefInput.default !== '') {
+  throw new Error('reusable CI must expose an optional empty-default checkout_ref string input');
+}
+if (checkout.with?.ref !== '${{ inputs.checkout_ref || github.sha }}') {
+  throw new Error('reusable CI must validate checkout_ref when supplied and preserve github.sha by default');
 }
 if (checkout.with?.['persist-credentials'] !== false) {
   throw new Error('reusable CI checkout must not persist credentials');
