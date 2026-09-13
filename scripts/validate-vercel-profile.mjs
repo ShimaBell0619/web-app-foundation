@@ -4,9 +4,12 @@ const requiredFiles = [
   'README.md',
   'docs/adoption.md',
   'docs/vercel.md',
+  'docs/vercel-on-demand-preview.md',
   'docs/vercel-fixed-staging.md',
   'templates/vercel/vercel-git.json',
   'templates/vercel/vite-spa-vercel.json',
+  'templates/vercel/on-demand-preview/preview.yml',
+  'templates/vercel/on-demand-preview/on-demand-preview.mjs',
 ];
 
 const failures = [];
@@ -39,15 +42,20 @@ function validateDeploymentPolicy(path, { requireSpaRewrite = false } = {}) {
     fail(`${path} git.deploymentEnabled must be a branch-rule mapping`);
   } else {
     const keys = Object.keys(policy).sort();
-    const expectedKeys = ['**', 'main', 'staging'];
+    const expectedKeys = ['**', 'main', 'preview/**'].sort();
     if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
-      fail(`${path} git.deploymentEnabled must define only **, main, and staging`);
+      fail(`${path} default git.deploymentEnabled must define only **, main, and preview/**`);
     }
     if (policy['**'] !== false) {
-      fail(`${path} must disable Git deployment with ** so slash-containing branches are covered`);
+      fail(`${path} must disable ordinary Git deployment with ** so slash-containing branches are covered`);
     }
     if (policy.main !== true) fail(`${path} must enable Git deployment for main`);
-    if (policy.staging !== true) fail(`${path} must enable Git deployment for staging`);
+    if (policy['preview/**'] !== true) {
+      fail(`${path} must enable only trusted preview/** refs for default non-Production hosting`);
+    }
+    if (Object.hasOwn(policy, 'staging')) {
+      fail(`${path} default profile must not enable optional Fixed Staging`);
+    }
   }
 
   if (requireSpaRewrite) {
@@ -62,12 +70,13 @@ function validateDeploymentPolicy(path, { requireSpaRewrite = false } = {}) {
 validateDeploymentPolicy('templates/vercel/vercel-git.json');
 validateDeploymentPolicy('templates/vercel/vite-spa-vercel.json', { requireSpaRewrite: true });
 
-const docs = {
-  'README.md': read('README.md'),
-  'docs/adoption.md': read('docs/adoption.md'),
-  'docs/vercel.md': read('docs/vercel.md'),
-  'docs/vercel-fixed-staging.md': read('docs/vercel-fixed-staging.md'),
-};
+const docs = Object.fromEntries([
+  'README.md',
+  'docs/adoption.md',
+  'docs/vercel.md',
+  'docs/vercel-on-demand-preview.md',
+  'docs/vercel-fixed-staging.md',
+].map((path) => [path, read(path)]));
 
 for (const [path, text] of Object.entries(docs)) {
   if (!text.includes('git.deploymentEnabled')) {
@@ -75,14 +84,13 @@ for (const [path, text] of Object.entries(docs)) {
   }
 }
 
-const providerGateDocs = ['docs/adoption.md', 'docs/vercel.md', 'docs/vercel-fixed-staging.md'];
-for (const path of providerGateDocs) {
+for (const path of ['docs/adoption.md', 'docs/vercel.md', 'docs/vercel-on-demand-preview.md']) {
   const text = docs[path];
   if (!text.includes('Preview') || !text.includes('Branch Tracking')) {
-    fail(`${path} must document the Vercel Preview Branch Tracking provider-side gate`);
+    fail(`${path} must document the Vercel Preview/Branch Tracking provider-side gate`);
   }
   if (!text.includes('post-adoption smoke')) {
-    fail(`${path} must require a post-adoption smoke before the staging-only profile is complete`);
+    fail(`${path} must require a post-adoption smoke before the default profile is complete`);
   }
 }
 
@@ -90,28 +98,63 @@ const vercelContract = docs['docs/vercel.md'];
 for (const marker of [
   'slash-containing',
   '`**`',
-  'ordinary feature branch',
+  '`preview/pr-N`',
+  '/preview',
+  'exact PR HEAD A',
+  'parent(B)=A',
+  'client_payload.url',
   'no Vercel deployment',
-  '`staging`',
-  'hosted review deployment',
-  '`main`',
   'Production deployment',
+  'Optional Fixed Staging',
 ]) {
   if (!vercelContract.includes(marker)) {
-    fail(`docs/vercel.md must preserve the Vercel deployment-policy evidence: ${marker}`);
+    fail(`docs/vercel.md must preserve the default Hosted Review evidence: ${marker}`);
+  }
+}
+
+const onDemand = docs['docs/vercel-on-demand-preview.md'];
+for (const marker of [
+  'write`, `maintain`, or `admin`',
+  'checkout_ref',
+  'parent(B) = A',
+  'tree(B)   = tree(A)',
+  'diff(A,B) = empty',
+  'repository_dispatch',
+  'client_payload.url',
+  'VERCEL_PROJECT_NAME',
+  'Production credentials',
+  'no Vercel deployment/status',
+]) {
+  if (!onDemand.includes(marker)) {
+    fail(`docs/vercel-on-demand-preview.md missing contract marker: ${marker}`);
+  }
+}
+
+const fixed = docs['docs/vercel-fixed-staging.md'];
+for (const marker of [
+  '**optional**',
+  '"staging": true',
+  'exact PR HEAD A',
+  'Foundation-Fixed-Staging-PR:',
+  'close-time PR HEAD',
+  'fixed-staging-deploy-slot',
+  '--force-with-lease',
+]) {
+  if (!fixed.includes(marker)) {
+    fail(`docs/vercel-fixed-staging.md missing optional-profile hardening marker: ${marker}`);
   }
 }
 
 const staleMarkers = new Map([
-  ['README.md', ['ordinary ephemeral PR Preview', 'optional fixed-origin Staging slot']],
-  ['docs/adoption.md', ['keep ordinary PR previews', 'branch/PR Preview deployment', 'keep normal PR Preview']],
-  ['docs/vercel.md', ['ordinary PR Preview intact', 'Ephemeral PR Preview: the Vercel-provided Preview URL', 'branch/PR Preview']],
-  ['docs/vercel-fixed-staging.md', ['keeps ordinary Vercel PR Preview', 'ordinary Vercel PR Preview', 'ordinary PR Preview continues unchanged']],
+  ['README.md', ['automatic Git deployment is intentionally limited to **`main` and `staging` only**', 'used as the default hosted non-Production review surface']],
+  ['docs/adoption.md', ['`staging` -> Fixed Staging hosted review;\n- every other branch', 'Fixed Staging is the default hosted non-Production review path']],
+  ['docs/vercel.md', ['default hosted topology is deliberately limited to two Git branches', '`staging` -> the single fixed non-Production review slot']],
+  ['docs/vercel-fixed-staging.md', ['This profile defines the single hosted non-Production review slot used by the default Vercel hosting contract']],
 ]);
 
 for (const [path, markers] of staleMarkers) {
   for (const marker of markers) {
-    if (docs[path].includes(marker)) fail(`${path} contains retired Preview guidance: ${marker}`);
+    if (docs[path].includes(marker)) fail(`${path} contains retired default-Staging guidance: ${marker}`);
   }
 }
 
@@ -121,4 +164,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('Vercel staging-only deployment profile is valid.');
+console.log('Vercel On-demand Preview default profile is valid.');
