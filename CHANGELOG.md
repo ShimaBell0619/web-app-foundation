@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- c38ae4e: BREAKING: make explicit On-demand Vercel Preview the default hosted-review contract and move Fixed Staging to an optional fixed-origin profile. Hosted Preview validates the exact PR HEAD before a trusted publisher creates a content-identical synthetic deployment commit; Production and Release exact-SHA rules remain unchanged.
+
+  Add an explicit reusable-CI checkout source for exact-HEAD validation and provide credential-free Vercel Git Integration Preview automation with repository-writer authorization, per-PR synthetic branches, Vercel success-event correlation, real Preview URL feedback, and close cleanup.
+
 ## 0.9.2
 
 ### Patch Changes
@@ -47,7 +55,7 @@
 
 ### Minor Changes
 
-- dce5388: Add a context-routed Chat-based AI implementation profile that deterministically selects repository contracts, extracts session-local Design Intent, maps contracts to implementation and validation evidence, batches GitHub I/O around coherent candidates, and explicitly rejects unjustified overengineering while preserving existing review, CI, conflict, and UI-validation boundaries.
+- dce5388: Add a context-routed Chat-based AI implementation profile that deterministically selects repository contracts, extracts session-local Design Intent, maps contracts to implementation and validation evidence, batches GitHub I/O around that map, and explicitly rejects unjustified overengineering while preserving existing review, CI, conflict, and UI-validation boundaries.
 
 ## 0.6.0
 
