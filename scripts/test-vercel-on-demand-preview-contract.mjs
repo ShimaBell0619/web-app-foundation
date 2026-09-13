@@ -48,7 +48,7 @@ for (const marker of [
   "['write', 'maintain', 'admin']",
   "pr?.base?.ref === 'main'",
   "pr?.head?.repo?.full_name === repo",
-  'git commit-tree',
+  "['commit-tree', sourceTree",
   'Foundation-Preview-PR:',
   'Source-PR-HEAD:',
   '--force-with-lease=',
