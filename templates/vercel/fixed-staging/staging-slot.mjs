@@ -1,5 +1,6 @@
 import { appendFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 const API_VERSION = '2022-11-28';
 const MAIN_BRANCH = 'main';
@@ -367,7 +368,11 @@ async function main() {
   throw new Error(`Unknown staging-slot command: ${command ?? '<missing>'}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+const invokedDirectly =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}
