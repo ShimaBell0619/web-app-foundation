@@ -82,7 +82,7 @@ jobs:
     needs: resolve
     permissions:
       contents: read
-    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@<FULL_FOUNDATION_COMMIT_SHA>
+    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@c38ae4e8e70a7307d6ff6a38cbd59797d94ac93c
     with:
       checkout_ref: ${{ needs.resolve.outputs.source_sha }}
       node_version_file: .node-version
