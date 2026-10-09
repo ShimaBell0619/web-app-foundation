@@ -4,8 +4,7 @@ ChatGPTなどのAIを利用してWebアプリを開発するための、再利�
 
 ## バージョンと位置付け
 
-Current Foundation version: **0.10.0 (pre-1.0)**.
-
+Current Foundation version: **0.11.0 (pre-1.0)**.
 実際のアプリで契約を検証するまでは`0.x`を維持します。標準構成はReact + TypeScript + Vite + npmですが、Next.jsなどの選択を禁止するものではありません。
 
 ## 主要な文書

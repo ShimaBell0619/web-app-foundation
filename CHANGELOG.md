@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- 33346ce: Chatを標準の自律実行経路とし、Workはユーザー明示指示時のみ利用する方針へ更新。直接ツール、Chat実行環境、一時Sandbox、GitHub Actionsによる安全な操作の選択と画面検証・Azure/GitHub委譲の契約を追加。
+- 1a5987e: AI開発の標準をChat + GitHub中心、必要時のみWork併用へ整理。中核文書とIssue/PRテンプレートを日本語化し、AGENTSと実装手順を簡素化。
+- f834f48: ChatからOwnerの明示承認で新規非公開GitHubリポジトリを作成する、最小権限・事前検証付きの管理経路を追加。初回GitHubトークン設定がない限り実行しない。
+
 ## 0.10.0
 
 ### Minor Changes

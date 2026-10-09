@@ -1,7 +1,6 @@
 # Web App Foundation — AI共通ルール
 
-Foundation-Version: 0.10.0
-
+Foundation-Version: 0.11.0
 ## 目的と適用範囲
 
 このファイルは、Foundation自身と採用先アプリでAIが守る共通の開発ルールを定める。特定のモデルや実行ツールには依存しない。実装手順の詳細は `docs/ai-implementation.md`、専門領域の仕様は対応する `docs/*` を参照する。
