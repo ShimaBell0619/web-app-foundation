@@ -40,7 +40,7 @@ Copied rules/templates do not change automatically. Reusable workflows execute t
 
 ## Chat・Workでの開発
 
-標準はChat + GitHubによる設計、Issue管理、小〜中規模の実装とし、実行・ブラウザ検証や大きな変更には必要に応じてWorkを使用する。双方は採用先の`AGENTS.md`に従い、作業手順の詳細はFoundation側の`docs/ai-implementation.md`を参照する。採用先の実態に合うよう参照先を調整する。
+標準は**Chat-first**とし、設計・実装・CI・実画面検証・デプロイまでChatから適切なツールと承認済み実行経路を選ぶ。Workはユーザーが明示的に指示したときだけ使用し、作業量やブラウザの必要性を理由に自動移行しない。双方は採用先の`AGENTS.md`に従い、作業手順の詳細はFoundation側の`docs/ai-implementation.md`を参照する。採用先の実態に合うよう参照先を調整する。
 
 基本的な参照文書はIssue・受け入れ条件、`PRODUCT.md`、`AGENTS.md`。UIでは`DESIGN.md`、認証・データ・配備では関連する専門仕様を追加で読む。採用先の`AGENTS.md`には、実在する規範文書だけを登録する。存在しない文書を形式的に作成しない。
 

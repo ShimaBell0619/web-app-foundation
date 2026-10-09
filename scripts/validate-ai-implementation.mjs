@@ -39,6 +39,17 @@ if (failures.length === 0) {
     '## 検証結果', '## 自己レビュー', '## 独立レビュー（リスクに応じて）',
   ]);
 
+  for (const [path, markers] of [
+    ['AGENTS.md', ['Chat-first', 'Workは明示指示のみ', 'docs/ai-implementation.md']],
+    ['docs/ai-implementation.md', ['Chatを標準の実行オーケストレーター', 'Workはユーザーが明示指示した場合に限る', '### Chatの実行経路の選択', '### GitHub・Azure操作の安全な委譲']],
+    ['docs/ui-review.md', ['## Chatからの実ブラウザ検証', 'GitHub ActionsでPlaywright']],
+    ['docs/azure-oidc.md', ['## Chat起点のAzure操作', '無制限のShell']],
+  ]) {
+    for (const marker of markers) {
+      if (!read(path).includes(marker)) fail(`${path} missing chat-first contract: ${marker}`);
+    }
+  }
+
   for (const path of ['AGENTS.md', 'docs/adoption.md', 'README.md']) {
     if (!read(path).includes('docs/ai-implementation.md')) {
       fail(`${path} must reference docs/ai-implementation.md`);
