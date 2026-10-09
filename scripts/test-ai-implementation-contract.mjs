@@ -8,6 +8,7 @@ const files = [
   'docs/ai-implementation.md',
   'AGENTS.md',
   'docs/adoption.md',
+  'docs/azure-oidc.md',
   'docs/ui-review.md',
   'docs/independent-review.md',
   'README.md',
