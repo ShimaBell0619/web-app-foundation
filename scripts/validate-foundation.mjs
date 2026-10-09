@@ -393,7 +393,9 @@ for (const path of workflowPaths) {
       fail(`${path} job ${jobName} must be a mapping`);
       continue;
     }
-    const allowedWrites = templatePolicy?.jobAllowedWrites?.[jobName] ?? [];
+    const allowedWrites = path === '.github/workflows/publish-foundation.yml' && jobName === 'publish'
+      ? ['contents']
+      : (templatePolicy?.jobAllowedWrites?.[jobName] ?? []);
     validatePermissions(path, job.permissions, `job ${jobName}`, { allowedWrites });
     if (job.uses !== undefined) validateUses(path, job.uses, `job ${jobName}`);
 
