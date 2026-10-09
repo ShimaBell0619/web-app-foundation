@@ -8,6 +8,7 @@ const files = [
   'docs/ai-implementation.md',
   'AGENTS.md',
   'docs/adoption.md',
+  'docs/azure-oidc.md',
   'docs/ui-review.md',
   'docs/independent-review.md',
   'README.md',
@@ -46,6 +47,18 @@ function run(dir, shouldPass, label) {
 
 try {
   run(resolve('.'), true, 'current AI implementation profile');
+
+  {
+    const dir = makeCopy();
+    mutate(dir, 'AGENTS.md', text => text.replace('Workは明示指示のみ', 'Workが必要なら自動移行'), 'explicit Work-only boundary');
+    run(dir, false, 'implicit Work migration forbidden');
+  }
+
+  {
+    const dir = makeCopy();
+    mutate(dir, 'docs/ai-implementation.md', text => text.replace('### GitHub・Azure操作の安全な委譲', '### Unrestricted operations'), 'privileged delegated operations');
+    run(dir, false, 'privileged operation gate required');
+  }
 
   {
     const dir = makeCopy();

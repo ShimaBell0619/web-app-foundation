@@ -134,6 +134,17 @@ A font stack that names only a Latin font can render CJK characters with an envi
 - Do not ship a large webfont only to make CI screenshots identical unless the product actually requires that font.
 - Treat CI screenshots as evidence from one rendering environment and inspect a real target device when typography is release-critical.
 
+## Chatからの実ブラウザ検証
+
+Chat内でブラウザにアクセスできない場合、先に**GitHub ActionsでPlaywrightを実行する経路**を検討する。アプリ側が実装とセレクターを所有し、必要なときに以下を確認できるようにする。
+
+- 実際のPRのビルド／信頼済みPreview／公開ページを、出所と対象SHAを明示して検証する。静的モックは実画面検証の代替ではない。
+- 320・390・1440pxのoverflow、重要な見出しや状態、Tab移動と可視フォーカスを最低限確認する。失敗は非ゼロ終了させ、スクリーンショットやPlaywrightレポートを**機密を含まない**短期成果物に保存する。
+- Chatから成果物、実行ログ、ワークフロー完了状態を取得して検証する。Previewのビルド成功やHTTP 200、APIのJSON構造成功とブラウザ実表示は別の証拠とする。
+- 本番データを使用する場合は低機密の閲覧許可済みデータに限定し、認証セッション、秘密情報、個人情報がスクリーンショット・trace・成果物に混入しないようにする。
+- 過剰なブラウザマトリクス、Visual Regressionサービス、恒久的な常時起動ブラウザは既定にしない。必要なアプリだけ`test:e2e`または明示的な`/ui-review`のような信頼済みWorkflowを追加する。
+- UIに接続できない場合は検証不能と報告する。**Workへはユーザーが明示指示した場合のみ移行する。**
+
 ## Automation boundary
 
 The Foundation does not require every consumer to add a visual-regression service or a large browser matrix.

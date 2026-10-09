@@ -114,6 +114,18 @@ When onboarding or changing the FIC, test the real trust path rather than assumi
 
 Do not print the raw OIDC token.
 
+## Chat起点のAzure操作
+
+ChatからAzureを直接操作する接続がない場合でも、認証済みGitHub接続で既存のIssueコメント等を投稿し、信頼済み`main`のGitHub Actions → OIDC → Azure CLI/Bicepを起動できる。ただしこれは**操作経路の代替であり、権限・承認の迂回ではない**。
+
+- `read` / `what-if` は原則読み取り専用のRBACとし、結果を構造化して記録する。
+- `apply` / `delete` は承認を得た対象Subscription・Resource Group・リソース・変更内容に限定し、可能なら専用のGitHub Environmentと保護ルールを適用する。
+- 受信したIssueコメントは信頼できない入力。投稿者権限、正確なコマンド文字列（または固定操作種別）、Issue/PR、コミットSHA、対象スコープを`main`上の信頼済みWorkflowで確認する。無制限のShell、`az rest`や任意Bicepパスをそのまま特権実行しない。
+- 資格情報はGitHub OIDCとAzure側の最小RBACを優先。Token、SAS、クライアントシークレットや環境変数の秘密をGitHubコメント・ログ・Chatに出さない。
+- 操作後、デプロイ操作ID、対象SHA、Azureの実在リソース状態、API疎通/スモークを別々に確認して報告する。
+- FIC/RBACの初回設定、規制や権限上の承認が不足するときは実行を止める。Workに自動移行しない。
+- アプリが必要とする操作だけを実装し、汎用Azure管理権限を持つ共通Agentや無制限の実行ゲートウェイは作らない。
+
 ## Proven consumer evidence
 
 `ms-credentials-tracker` used an owner-wide Flexible FIC and then successfully ran:
