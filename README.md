@@ -53,3 +53,11 @@ PRの`/preview`コメントから、対象HEADのCIを実施したうえで合�
 - `docs/adoption.md`：導入・更新・プロバイダー側の動作確認。
 
 既存のアプリを新しい既定設定に合わせるためだけに改修しません。Foundationの改訂は採用先で影響を評価してから適用します。
+
+## Chatからの新規GitHubリポジトリ作成（任意の管理機能）
+
+Chatから個人所有の新規**非公開**リポジトリを作る際は、既存のFoundationリポジトリを操作起点として利用できます。**現時点では権限の初期設定がないため、作成の実行はまだできません。**
+
+初回だけ、GitHub公式のAPIで`POST /user/repos`が認可される**期限付き・最小権限のユーザートークン**（Fine-grained PATの「Repository creation: write」等）を用意し、FoundationのRepository secret `REPO_CREATION_TOKEN`へ設定します。**トークンをChat、Issue、PRに貼らないでください。** この設定にはGitHub上の本人操作が必要です。通常の`GITHUB_TOKEN`だけでは個人の新規リポジトリを作成できません。
+
+トークン設定後は、ChatがOwner本人の依頼に従ってFoundationにタイトル`repo-create: <safe-name>`のIssueを作成し、所有者の承認された正確な`/create-private-repo`コメントで実行します。実行ジョブは信頼済み`main`、GitHub Actions標準Tokenは読み取り専用。Issue作者・コメント作者・Tokenのユーザーを同一Ownerとして再検証し、既存repoがあれば作成せず失敗します。実行結果には作成した非公開repo URLだけを残します。公開repoの作成、任意のShell実行、既存repoの権限変更、リポジトリ削除は対象外です。
