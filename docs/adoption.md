@@ -7,8 +7,8 @@ For a new application:
 1. Start from real product requirements rather than copying a full framework stack blindly.
 2. Copy `PRODUCT.base.md` to `PRODUCT.md` and replace template text with the approved product contract.
 3. Copy `DESIGN.base.md` to `DESIGN.md`, preserve the Google DESIGN.md alpha structure, and add application-specific tokens/rationale. For a new React-oriented browser-first UI, adopt the default primitive-first profile in `docs/ui-implementation.md`; for material UI work, use `docs/ui-review.md` to validate the rendered result against that product-specific direction.
-4. Copy/adapt the relevant `AGENTS.md` rules. Add app-specific constraints rather than depending on chat memory, and maintain the repository's Context Routing for normative specialist documents as described in `docs/ai-implementation.md`.
-5. Add specialist documents only when needed, commonly `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/RELEASE.md`, or `docs/COMPATIBILITY.md`. When such a document becomes normative for implementation decisions, register it in Context Routing in the same change.
+4. `AGENTS.md` の共通ルールを採用先に合わせてコピー・調整する。存在しないローカル文書を参照しないようパスを更新し、専門仕様の参照先は `AGENTS.md` の「コンテキストの選択」に登録する。共通の実装手順は Foundation の `docs/ai-implementation.md` を参照できるため、必ずしもコピーする必要はない。
+5. 専門文書は必要になった場合だけ追加する（例：`docs/ARCHITECTURE.md`、`docs/SECURITY.md`）。規範となる文書を追加・改名・削除する場合は、同じ変更で `AGENTS.md` の参照表も更新する。
 6. Use a committed Node version file and package-manager lockfile.
 7. Define the default npm scripts `check`, `typecheck`, `test`, and `build`; document any justified opt-out instead of omitting a script silently.
 8. Add an app-owned CI caller that references the reusable Foundation workflow by a reviewed full commit SHA.
@@ -40,7 +40,7 @@ Copied rules/templates do not change automatically. Reusable workflows execute t
 
 ## Chat・Workでの開発
 
-標準はChat + GitHubによる設計、Issue管理、小〜中規模の実装とし、実行・ブラウザ検証や大きな変更には必要に応じてWorkを使用する。どちらも採用先リポジトリの`AGENTS.md`と`docs/ai-implementation.md`に従う。
+標準はChat + GitHubによる設計、Issue管理、小〜中規模の実装とし、実行・ブラウザ検証や大きな変更には必要に応じてWorkを使用する。双方は採用先の`AGENTS.md`に従い、作業手順の詳細はFoundation側の`docs/ai-implementation.md`を参照する。採用先の実態に合うよう参照先を調整する。
 
 基本的な参照文書はIssue・受け入れ条件、`PRODUCT.md`、`AGENTS.md`。UIでは`DESIGN.md`、認証・データ・配備では関連する専門仕様を追加で読む。採用先の`AGENTS.md`には、実在する規範文書だけを登録する。存在しない文書を形式的に作成しない。
 
