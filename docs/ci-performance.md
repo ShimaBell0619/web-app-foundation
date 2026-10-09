@@ -1,39 +1,47 @@
-# CI Performance Guidance
+# CIの性能とキャッシュ運用
 
-## Default cache
+## 既定のキャッシュ
 
-The reusable web CI uses `actions/setup-node` with npm caching. This caches npm's package-manager download cache, **not `node_modules`**. `npm ci` still reconstructs dependencies from the committed lockfile.
+共通Web CIでは、`actions/setup-node` のnpmキャッシュを使用する。キャッシュするのはnpmのパッケージダウンロード用キャッシュであり、**`node_modules` ではない**。`npm ci` はコミット済みのロックファイルを基に依存関係を再構築する。
 
-Use `cache-dependency-path` to point at the authoritative lockfile. The reusable workflow is intended for unprivileged quality validation; do not assume the same cache policy is appropriate for privileged publishing.
+`cache-dependency-path` には正本となるロックファイルを指定する。共通Workflowは特権を持たない品質検証向けであり、公開・配備の特権付きジョブに同じキャッシュ方針を無条件で適用しない。
 
-## What not to cache by default
+## 既定では追加しないキャッシュ
 
-Do not add these caches merely because they exist:
+以下は、存在するという理由だけでキャッシュしない。
 
-- `node_modules`,
-- Playwright/browser binaries,
-- framework build output such as `.next/cache`,
-- test-runner caches,
-- generated artifacts.
+- `node_modules`
+- Playwrightなどのブラウザ実行ファイル
+- `.next/cache` などのフレームワークのビルド出力
+- テストランナーのキャッシュ
+- 生成成果物
 
-Each adds invalidation rules, storage use, security considerations, and debugging complexity.
+追加するたびに、無効化条件、保存容量、セキュリティ、障害調査の負担が増える。
 
-## When to add another cache
+## キャッシュを追加する条件
 
-Add an additional cache only after measuring uncached duration, hit rate, restore/save time, typical size, invalidation correctness, and trust-boundary/cache-poisoning implications. A cache that saves seconds but adds opaque stale-state failures is not an optimization.
+キャッシュ未使用時の実行時間、ヒット率、復元・保存時間、サイズ、無効化の正しさ、信頼境界とキャッシュ汚染のリスクを測定してから判断する。わずかな時間短縮のために、原因が分かりにくい古い状態を持ち込まない。
 
-Never store secrets, credentials, production configuration, or privileged mutable state in a cache. Privileged publish/deploy jobs should default to no cache and opt in only after explicit threat-model review.
+**秘密情報、認証情報、本番設定、特権のある変更可能な状態をキャッシュしない。** 特権付きの公開・配備ジョブではキャッシュを使用しないことを既定とし、利用する場合は脅威モデルを明示的にレビューする。
 
-## Dependency install baseline
+## 依存関係のインストール
 
-For npm applications, `npm ci` is the CI installation contract. Keep `package-lock.json` committed and review lockfile changes. Foundation CI also exercises an actual consumer fixture so replacing dependency installation with a textual/no-op marker does not satisfy the contract.
+npmアプリのCIでは`npm ci`を使用する。`package-lock.json`をコミットし、変更をレビューする。
 
-## Required quality gates
+Foundation CIでは採用先アプリを模したテスト用プロジェクトも実際に実行する。依存関係のインストールを単なる文字列や何もしない処理に置き換えても、検証を満たしたことにはならない。
 
-`check`, `typecheck`, and `test` run by default; `build` always runs. A gate is skipped only through an explicit workflow input with a non-empty reason. This makes script deletion/renaming a visible failure instead of a silent reduction in coverage.
+## 必須の品質ゲート
 
-## E2E
+既定では`check`、`typecheck`、`test`を実行し、`build`は常に実行する。前の3つを省略できるのは、Workflowの入力で理由を空文字にせず明示した場合だけとする。
 
-Browser E2E remains opt-in because browser/runtime setup can dominate CI time. When `run_e2e` is enabled, `test:e2e` must be a one-shot, self-contained command for its required browser/server lifecycle. For complex Playwright setup, visual infrastructure, environment credentials, or provider-specific services, prefer an app-owned E2E job.
+これにより、必要なnpmスクリプトの削除・改名が、検証範囲の黙示的な縮小ではなくエラーとして検出される。
 
-Add browser or framework caches only after measurement and with version/platform-aware keys plus an explicit trust-boundary review.
+## E2Eテスト
+
+ブラウザのセットアップや実行環境の起動に時間がかかるため、E2E（End-to-End）テストは任意とする。
+
+`run_e2e`を有効にした場合、`test:e2e`は必要なブラウザ・サーバーの起動から終了処理までを含む、1回で終了するコマンドでなければならない。
+
+Playwrightの複雑な準備、画面検証用の基盤、環境別の認証情報、プロバイダー固有サービスなどが必要な場合は、アプリ側で所有するE2Eジョブを利用する。
+
+ブラウザやフレームワークのキャッシュを追加する場合も、測定結果に加え、バージョン・プラットフォームに対応したキーと信頼境界の明示的なレビューを必要とする。
