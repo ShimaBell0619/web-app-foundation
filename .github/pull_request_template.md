@@ -1,92 +1,46 @@
-## Summary
+## 目的・変更内容
 
 - 
 
-## Issues
-
-Use `Refs #N` for an intermediate/partial PR. Use `Closes #N` only when this PR satisfies all remaining acceptance criteria for that Issue.
+## 関連Issue・受け入れ条件
 
 - Refs / Closes: #
+- 受け入れ条件と証拠:
 
-## Acceptance criteria evidence
+## 設計・影響範囲
 
-| Issue / acceptance criterion | Evidence |
-| --- | --- |
-|  |  |
+- 参照した仕様・維持する動作:
+- 更新したPRODUCT / DESIGN / AGENTS / 専門文書（なければ「なし」）:
+- 重要な設計判断・新しい依存関係（なければ「なし」）:
 
-## Context routing / Design Intent
+## 検証結果
 
-Keep this compact. The session-local Repository Context Packet is not a PR artifact.
+- [ ] 影響する静的チェック・型チェック・テスト
+- [ ] 本番ビルド
+- [ ] UI変更時のレンダリング・操作確認
+- [ ] E2Eなど追加で必要な検証
+- 実施したコマンド・CI URL・確認対象SHA:
+- 未実施の検証と理由:
 
-- Change classification / affected areas:
-- Routed repository contracts:
-- Scope expansion / rerouting: none / describe
-- Design Intent — must preserve / must not change:
-- Overengineering check — added abstraction/dependency/layer/process justified by current need, or none:
+## 自己レビュー
 
-## Contract impact
+- 最終差分の確認結果、修正した指摘、残存リスク:
 
-- PRODUCT.md: none / updated
-- DESIGN.md: none / updated
-- AGENTS.md: none / updated
-- Architecture/security/release/operations specialist docs: none / updated
+## 独立レビュー（リスクに応じて）
 
-## Validation
+- [ ] 低リスクのため省略（理由を下に記載）
+- [ ] Codexレビューを依頼（明示的な承認あり）
+- [ ] 別のレビュー担当者が確認
+- [ ] 必要だが未実施（残存リスクを記載）
+- 判断理由・リスク分類:
+- `@codex review` の承認証拠（再レビューは別途承認）:
+- 対象としたマージ候補HEAD SHA:
+- 主な指摘と採否・修正:
+- 再レビューの要否と承認証拠:
+- 残存リスク:
 
-- [ ] Static/lint/format checks required by the app contract
-- [ ] Typecheck required by the app contract, or explicit documented opt-out
-- [ ] Tests required by the app contract, or explicit documented opt-out
-- [ ] Production build
-- [ ] Rendered UI validation when user-facing UI changed
-- [ ] E2E when enabled by the protected flow
+## Release・Changeset
 
-## AI self-review
-
-- Reviewed commit/SHA or final diff scope:
-- Design Intent / contract-fit result:
-- Review finding(s):
-- Correction/hardening applied:
-- Re-review result:
-- Remaining material findings: none / listed below
-
-## Independent review
-
-Independent review is separate from the implementation agent's self-review. Use `docs/independent-review.md` for the operating policy. Every Codex invocation, including re-review, requires a concrete rationale and explicit user/maintainer approval before `@codex review` is posted.
-
-- [ ] Not requested because this is low risk; reason recorded below
-- [ ] Codex review proposed; rationale presented and explicit approval obtained before `@codex review`
-- [ ] Completed by another independent human/agent reviewer
-- [ ] Recommended/required for the risk level but unavailable or not approved; residual risk recorded below
-
-- Review decision / risk rationale:
-- Affected risk category / expected review value:
-- Codex invocation approval: not applicable / explicitly obtained
-- Merge-candidate SHA reviewed:
-- Material finding(s) and disposition:
-- Re-review rationale when applicable:
-- Re-review approval: not applicable / explicitly obtained
-- Re-review decision: not needed / requested / completed
-- Re-review SHA when applicable:
-- Residual risk / merge decision owner when applicable:
-
-## Security / runtime-network impact
-
-- 
-
-## Release intent
-
-- [ ] This PR is not itself a requested versioned application/Foundation release.
-- [ ] This PR is part of an explicit release milestone; version/tag/GitHub Release evidence is required before the milestone is reported complete.
-
-If release intent is explicit:
-
-- Version source / requested version:
-- Validated release commit:
-- Expected tag:
-- GitHub Release / prerelease expectation:
-- Production deployment/status evidence when applicable:
-
-## Changeset
-
-- [ ] Added because the change is consumer-visible/release-relevant
-- [ ] Not required because the change does not alter a consumer-facing contract
+- [ ] 通常の変更PR（バージョン公開は目的ではない）
+- [ ] 明示的なRelease作業（バージョン、タグ、公開結果を記載）
+- Changeset: 追加済み / 契約変更なしのため不要

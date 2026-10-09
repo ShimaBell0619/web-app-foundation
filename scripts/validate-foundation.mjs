@@ -86,13 +86,13 @@ if (agentsVersion && agentsVersion !== version) fail('AGENTS Foundation-Version 
 for (const marker of [
   'PRODUCT.md',
   'DESIGN.md',
-  'Issue-driven development',
-  'Mandatory AI implementation loop',
-  'Approval-required decisions',
-  'Completion gate',
-  'reviewed full commit SHAs',
+  '## 変更とGit操作',
+  '## 承認が必要な変更',
+  '## 実装・自己レビュー・完了条件',
+  '## 独立レビュー',
+  '40桁のコミットSHA',
   'Semantic Versioning',
-  'Changeset',
+  'Changesets',
   'Conventional Commit',
 ]) {
   if (!agents.toLowerCase().includes(marker.toLowerCase())) fail(`AGENTS.md missing contract marker: ${marker}`);
