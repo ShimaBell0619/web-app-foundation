@@ -1,89 +1,55 @@
 # web-app-foundation
 
-Shared AI-first foundation for web applications developed primarily through ChatGPT and other coding agents.
+ChatGPTなどのAIを利用してWebアプリを開発するための、再利用可能な開発ルールとCIテンプレートです。アプリ固有の仕様・デザインは各アプリのリポジトリが管理します。
 
-## Status
+## バージョンと位置付け
 
 Current Foundation version: **0.10.0 (pre-1.0)**.
-This Foundation is intentionally pre-1.0 while its contracts are validated in real applications. React + TypeScript + Vite + npm is the current default implementation baseline, but the core development rules are intentionally framework-tolerant so future Next.js or full-stack applications can adopt the same foundation.
 
-## Purpose
+実際のアプリで契約を検証するまでは`0.x`を維持します。標準構成はReact + TypeScript + Vite + npmですが、Next.jsなどの選択を禁止するものではありません。
 
-This repository is the source of truth for reusable web-development principles, AI agent behavior, document responsibilities, versioning discipline, and reusable GitHub Actions CI.
+## 主要な文書
 
-Application repositories remain self-contained. Product and design templates are copied and adapted into each app, while reusable workflows are referenced from this repository by a reviewed immutable commit SHA.
+| ファイル | 役割 |
+| --- | --- |
+| `PRODUCT.base.md` | アプリの`PRODUCT.md`の原型。機能・制約・非対象を定義 |
+| `DESIGN.base.md` | アプリの`DESIGN.md`の原型。UX・デザインを定義 |
+| `AGENTS.md` | AI開発に共通する最小限の規則 |
+| `docs/ai-implementation.md` | Chat + GitHub、Workを使った実装・引き継ぎの手順 |
+| `docs/adoption.md` | 新規アプリへのFoundation導入手順 |
 
-## Core document contract
+IssueとPRは判断・変更の記録です。製品の最新仕様はアプリ側の`PRODUCT.md`と`DESIGN.md`を正本とします。
 
-- `PRODUCT.base.md` -> seed for an application's `PRODUCT.md`: **What** the product is and must do.
-- `DESIGN.base.md` -> seed for an application's `DESIGN.md`: **Experience** and visual/design-system rules.
-- `AGENTS.md` -> **How** AI agents plan, implement, review, validate, and change the repository.
-- `README.md` -> user/contributor orientation, not the authoritative product contract.
-- `docs/*` -> detailed architecture, security, release, operational, or adoption guidance when the topic deserves its own document.
-- Issues/PRs/Git history -> decision history and implementation evidence, not the current source of truth.
+## 開発の進め方
 
-## Default web baseline
+既定は **Chat + GitHub** で設計・Issue整理・小〜中規模の修正を行い、実行環境やブラウザでの検証、大きな変更が必要な場合に **Work** を使います。
 
-The current default for a new browser-first application is TypeScript + React + Vite + npm with a committed lockfile and a production-suitable Node LTS pinned in `.node-version`. These are defaults, not permanent restrictions; SSR, server components, API routes, backend services, databases, or alternative frameworks are introduced when product requirements justify them.
+`AGENTS.md`は両方に共通です。受け入れ条件、必要な仕様、作業ブランチ、PR、CI結果で引き継ぐため、会話全文のコピーや専用Agentは必要ありません。
 
-## Default UI implementation profile
+実質的な変更は、実装 → 自己レビュー → 修正 → 最終検証を行います。リスクの高い変更では`docs/independent-review.md`に従って独立レビューを検討します。
 
-For new React-oriented browser-first consumers, the default UI implementation profile is **Tailwind CSS + shadcn/ui-style accessible primitives + product-specific semantic composition**. Generic controls should come from mature primitives; product identity should come from information hierarchy, layout, tokens, typography, density, data presentation, and interaction flow rather than bespoke reimplementation of routine controls.
+## アプリ実装の既定
 
-The profile is a default, not a forced shared skin. Existing consumers are not required to migrate solely for conformity, and non-React or established-design-system consumers may document an equivalent accessible primitive approach. See `docs/ui-implementation.md` for the layering, custom-CSS boundary, demo-composition guardrails, and deviation rules.
+- Web UI：Tailwind CSSとshadcn/ui相当のアクセシブルな基本部品を既定とする。画面の意味・階層・見た目はアプリの`DESIGN.md`が決める（`docs/ui-implementation.md`）。
+- UIレビュー：見た目の変更は実際にレンダリングして確認する（`docs/ui-review.md`）。
+- CI：再利用可能な`.github/workflows/web-ci.yml`で`check`、`typecheck`、`test`、`build`を実施する。許容された明示的な除外を除き必須。呼び出し元はレビュー済みコミットSHAに固定する。
+- 変更管理：Semantic Versioning（SemVer）とChangesetsを使用する（`docs/versioning.md`）。
 
-## AI development lifecycle
+## Vercelの既定運用
 
-Feature work is Issue-driven. An Issue represents one independently understandable objective with acceptance criteria. Related Issues may share a PR; an Issue may also span multiple PRs, using `Refs #N` until the final AC-completing PR uses `Closes #N`.
+Vercel Git Integrationを標準とします。リポジトリの`git.deploymentEnabled`により、Productionは`main`、必要時の非本番Previewは信頼された`preview/**`ブランチから配備します。通常のfeature/PRブランチは自動デプロイしません。
 
-Agents do not treat the first implementation pass as complete: read contracts -> implement -> self-review as another engineer -> correct/harden -> re-review -> final validation -> evidence-based completion report. Independent review is a separate risk-based layer: when Codex GitHub Code Review is used, Automatic Review stays off and a reviewer is requested explicitly with `@codex review` against the merge-candidate HEAD. See `docs/independent-review.md` for the responsibility split and operating rules.
+PRの`/preview`コメントから、対象HEADのCIを実施したうえで合成コミットを使ったOn-demand Previewを起動します。Productionと通常のReleaseは実際のソースSHAを使用します。OAuthなど固定URLが必要な場合だけFixed Stagingを採用します。
 
-For normal Chat-based implementation, `docs/ai-implementation.md` adds a context-routed profile above that loop: classify the change, deterministically route only the required repository contracts, build a session-local Repository Context Packet, extract change-specific Design Intent, map contract -> implementation surface -> validation evidence, then batch GitHub reads/writes around that map. The packet never replaces repository contracts, and speed improvements never remove conflict detection, self-review, CI, or rendered UI validation.
+既定方式の詳細は`docs/vercel.md`、`docs/vercel-on-demand-preview.md`を参照してください。固定Stagingは`docs/vercel-fixed-staging.md`です。
 
-The same profile explicitly rejects overengineering: new abstractions, dependencies, layers, services, workflows, configuration formats, or permanent process artifacts need a current requirement, real boundary, observed repetition, measured evidence, or adopted Foundation contract. Hypothetical future reuse and conformity alone are not sufficient reasons.
+## 補足資料
 
-## CI boundary
+- `docs/application-releases.md`：必要時だけ導入するアプリのタグとGitHub Release。
+- `docs/azure-oidc.md`：GitHub ActionsからAzureへアクセスする場合のOIDCと権限境界。
+- `docs/ci-performance.md`：CIの速度とキャッシュ設計。
+- `docs/ui-implementation.md`、`docs/ui-review.md`：UI実装と画面レビュー。
+- `docs/independent-review.md`：Codexレビューを含む独立レビュー。
+- `docs/adoption.md`：導入・更新・プロバイダー側の動作確認。
 
-`.github/workflows/web-ci.yml` is the reusable default validation workflow for npm-based web apps. It requires `check`, `typecheck`, `test`, and production `build` by default. Check/typecheck/test can be skipped only through an explicit workflow opt-out with a non-empty reason; build remains mandatory. A small consumer fixture runs the reusable workflow in Foundation CI so GitHub validates the actual shared workflow, not only text markers.
-
-The workflow validates the triggering `github.sha` by default and can accept an explicit `checkout_ref` from trusted automation when an exact source revision must be proven. The Foundation uses `actions/setup-node` npm download caching, never a `node_modules` cache by default. Quality evidence remains distinct from hosting/deployment status.
-
-## Default hosting profile
-
-Vercel Git Integration remains the default hosting/deployment profile, but v0.10 changes the hosted-review default to **explicit On-demand Preview**.
-
-- `main` -> Production
-- `preview/pr-N` -> trusted On-demand Preview source created only after `/preview`
-- feature/fix/ordinary PR branches -> no Vercel deployment
-- `staging` -> optional Fixed Staging only when a stable origin is actually required
-
-The repository-owned `git.deploymentEnabled` policy is part of the contract. Default templates use a slash-safe `"**": false` catch-all, explicitly enable `main`, and re-enable only trusted `preview/**` synthetic refs.
-
-A repository writer requests hosted review by commenting `/preview` on an eligible same-repository PR. The trusted workflow validates exact PR HEAD A with reusable Foundation CI, then creates a content-identical synthetic child B where `parent(B)=A` and `tree(B)=tree(A)`. Vercel Git Integration builds `preview/pr-N`, and the validated real `client_payload.url` is returned to the PR.
-
-The synthetic-commit exception is limited to non-Production hosted review. Production and versioned Release publication continue to use their real source-SHA contracts. No Vercel API token or Deploy Hook is required by the default Preview path.
-
-Fixed Staging remains supported separately for exact-origin requirements such as OAuth. It is no longer required for every Vercel consumer.
-
-See `docs/vercel.md` for the overall hosting contract, `docs/vercel-on-demand-preview.md` for the default hosted-review workflow, and `docs/vercel-fixed-staging.md` for the optional stable-origin slot.
-
-## Operational profiles
-
-- `docs/vercel.md` — default Vercel Git-integrated Production + On-demand Preview hosting contract and repository-owned branch policy.
-- `docs/vercel-on-demand-preview.md` — trusted `/preview` flow, exact-source CI, synthetic source identity, stale-event protection, URL feedback, cleanup, and Preview trust boundary.
-- `docs/vercel-fixed-staging.md` — optional fixed-origin single-slot profile for OAuth/webhook/other stable-origin requirements.
-- `docs/application-releases.md` — optional application SemVer -> immutable tag -> published GitHub Release profile with a copyable app-owned workflow template.
-- `docs/azure-oidc.md` — optional GitHub Actions -> Microsoft Entra -> Azure OIDC bootstrap guidance, including owner-wide Flexible FIC for convenience-first personal-repository operation.
-
-A consumer may document a justified hosting deviation when product or platform requirements demand it, but the Foundation keeps one default path rather than maintaining automatic per-PR deployments as a competing default.
-
-## Versioning
-
-- Semantic Versioning is the default.
-- Foundation stays in `0.x` until real consumers validate a deliberate 1.0 gate.
-- Changesets record consumer-visible/release-relevant changes.
-- The Changesets CLI is an exact devDependency covered by `package-lock.json` and `npm ci`.
-- `CHANGELOG.md` records released Foundation changes.
-- A downstream application's Git tag is not treated as a complete versioned release when the requested contract calls for a published GitHub Release.
-
-See `docs/adoption.md`, `docs/ai-implementation.md`, `docs/ui-implementation.md`, `docs/ui-review.md`, `docs/independent-review.md`, `docs/ci-performance.md`, `docs/vercel.md`, `docs/vercel-on-demand-preview.md`, `docs/vercel-fixed-staging.md`, `docs/application-releases.md`, `docs/azure-oidc.md`, and `docs/versioning.md` for the detailed contracts.
+既存のアプリを新しい既定設定に合わせるためだけに改修しません。Foundationの改訂は採用先で影響を評価してから適用します。

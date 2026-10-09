@@ -1,78 +1,74 @@
-name: Work item
-description: Feature, bug fix, refactor, or Foundation change
+name: 作業項目
+description: 機能追加、不具合修正、リファクタリング、Foundationの改善
 title: ""
 labels: []
 body:
   - type: dropdown
     id: kind
     attributes:
-      label: Change type
+      label: 変更種別
       options:
-        - Feature
-        - Bug
-        - Refactor
-        - Documentation
-        - CI / tooling
-        - Foundation contract
+        - 機能追加
+        - 不具合修正
+        - リファクタリング
+        - 文書
+        - CI / ツール
+        - Foundationの契約
     validations:
       required: true
 
   - type: textarea
     id: goal
     attributes:
-      label: Goal
-      description: One independently understandable objective.
-      placeholder: What outcome should this Issue produce?
+      label: 目的
+      description: 1つの独立して理解できる作業目的を記載します。
+      placeholder: 何を改善・実現するか
     validations:
       required: true
 
   - type: dropdown
     id: areas
     attributes:
-      label: Affected areas
-      description: Select the areas known when opening the Issue. The implementation agent may add routes if discovery expands the scope.
+      label: 変更対象
+      description: 分かっている範囲を選択します。作業中に必要な対象を追加できます。
       multiple: true
       options:
-        - Product behavior
-        - Product design / UX
-        - UI infrastructure
-        - Domain / data
-        - Integration / trust
-        - Architecture / platform
-        - Delivery / operations
-        - Local implementation / refactor
+        - 製品の振る舞い
+        - UI・UX
+        - UI基盤
+        - ドメイン・データ
+        - 外部連携・信頼境界
+        - アーキテクチャ・実行基盤
+        - CI・配備・運用
+        - 局所的な実装・リファクタリング
     validations:
       required: false
 
   - type: textarea
     id: context
     attributes:
-      label: Contract pointers and Issue-specific constraints
-      description: Point to unusual relevant contracts or state Issue-specific constraints. Do not copy repository contract documents into the Issue.
+      label: 関連仕様・制約
+      description: 参照する文書や維持すべき動作があれば記載します。既存文書を全文コピーしないでください。
       placeholder: |
-        - docs/ARCHITECTURE.md — affected boundary
-        - Existing behavior that must remain unchanged
+        - 関連: docs/...
+        - 維持する既存動作:
     validations:
       required: false
 
   - type: textarea
     id: non_goals
     attributes:
-      label: Explicit non-goals
-      description: Adjacent work that must not be pulled into this Issue. Leave blank when the scope is already unambiguous.
-      placeholder: |
-        - Do not redesign ...
-        - Do not migrate ... solely for conformity
+      label: 対象外
+      description: 今回行わない隣接作業がある場合だけ記載します。
     validations:
       required: false
 
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance criteria
-      description: Observable conditions that define completion.
+      label: 受け入れ条件
+      description: 完了を確認できる条件を記載します。
       placeholder: |
-        - [ ] ...
         - [ ] ...
     validations:
       required: true
@@ -80,7 +76,7 @@ body:
   - type: textarea
     id: validation
     attributes:
-      label: Validation expectations
-      description: Tests, rendered UI checks, migration checks, security evidence, or other required validation.
+      label: 必要な検証
+      description: 特に必要なテスト、UI表示確認、セキュリティ確認などがあれば記載します。
     validations:
       required: false

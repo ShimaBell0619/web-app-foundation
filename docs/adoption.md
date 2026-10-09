@@ -38,32 +38,13 @@ An application should keep a small provenance record, for example in `docs/FOUND
 
 Copied rules/templates do not change automatically. Reusable workflows execute the exact commit SHA referenced by the app. Upgrade both deliberately, and read current provenance before changing Foundation-derived rules or workflow refs.
 
-## Context-routed Chat implementation
+## Chat・Workでの開発
 
-Consumers that use Chat-based implementation should adopt the context-routing contract from `AGENTS.md` and the detailed method in `docs/ai-implementation.md`.
+標準はChat + GitHubによる設計、Issue管理、小〜中規模の実装とし、実行・ブラウザ検証や大きな変更には必要に応じてWorkを使用する。どちらも採用先リポジトリの`AGENTS.md`と`docs/ai-implementation.md`に従う。
 
-Keep the routing index small and repository-specific. A typical consumer starts with the base route (`PRODUCT.md`, `AGENTS.md`, Issue/Acceptance Criteria, and Foundation provenance when present) and registers only specialist documents that actually exist and are normative for implementation. Typical mappings are:
+基本的な参照文書はIssue・受け入れ条件、`PRODUCT.md`、`AGENTS.md`。UIでは`DESIGN.md`、認証・データ・配備では関連する専門仕様を追加で読む。採用先の`AGENTS.md`には、実在する規範文書だけを登録する。存在しない文書を形式的に作成しない。
 
-```markdown
-## Context routing
-
-| Change area | Required context |
-| --- | --- |
-| Product design / UX | DESIGN.md |
-| UI infrastructure | DESIGN.md, adopted UI implementation/review guidance |
-| Domain / data | docs/DOMAIN.md, docs/ARCHITECTURE.md |
-| Integration / trust | integration-specific contract, docs/ARCHITECTURE.md, security contract when present |
-| Delivery / operations | affected deployment/release/staging contract |
-| Foundation adoption | docs/FOUNDATION.md, target Foundation guidance/change notes |
-```
-
-Do not create empty documents merely to match this example. Matching routes are additive. When a normative specialist document is introduced, renamed, split, or retired, update Context Routing in the same change if future agents need it to find that contract.
-
-For each material Issue, the implementation agent builds a session-local Repository Context Packet, extracts Design Intent, and maps contract/Acceptance Criteria -> implementation surface -> validation evidence before implementation. Do not commit that packet as a permanent context artifact. Repository contracts at the recorded revision remain authoritative.
-
-Adoption does not require rewriting stable code merely to conform to a newer Foundation default. Use the new method on the next objective-driven material change and migrate implementation mechanisms only when the change has a concrete benefit.
-
-The same profile includes an explicit complexity discipline: speculative abstractions, dependencies, layers, workflows, configuration formats, and permanent process artifacts are not acceptable future-proofing. Add complexity only when a current requirement, real responsibility/trust/lifecycle boundary, observed repetition, measured evidence, or already-adopted Foundation contract justifies it.
+ChatからWorkへはIssue、PR、作業ブランチ、HEAD SHA、承認済み判断と検証結果を引き継ぐ。専用のContext Packetや会話の全文コピーは不要。既存の安定動作を新しいFoundation既定に合わせるためだけに変更しない。
 
 ## Minimum npm contract
 
@@ -138,21 +119,13 @@ For a new React-oriented browser-first consumer, use `docs/ui-implementation.md`
 
 Do not force-migrate an existing consumer only for conformity. Non-React consumers or applications with an established accessible design system may use an equivalent mature primitive approach and record the deviation as appropriate.
 
-## Selective independent code review
+## 必要時のみ独立レビュー
 
-Consumers inherit the `AGENTS.md` distinction between mandatory self-review and risk-based independent review. Do not treat a second pass by the implementation agent as independent evidence.
+`AGENTS.md`の自己レビューとCIは常に行う。高リスクの変更では`docs/independent-review.md`に従い、独立レビューを検討する。
 
-When Codex GitHub Code Review is used:
+Codex GitHub Code Reviewは、Automatic Review / Review my pull requestsをOFFに設定する。マージ候補のHEADに対して`@codex review`を依頼するときは、**実行のたびに理由を提示し、明示的な承認を得る**。再レビューにも別途承認が必要。低リスクの変更では理由を記録して省略できる。
 
-- keep Automatic Review / Review my pull requests OFF;
-- wait until implementation, tests, self-review, and relevant CI produce the intended merge-candidate HEAD;
-- before each `@codex review` invocation, including re-review, present the concrete review rationale, affected risk category, and expected value, then obtain explicit approval;
-- every Codex invocation, including re-review, requires fresh approval; an earlier approval does not carry forward;
-- only after that approval, request review manually from the PR conversation;
-- allow low-risk changes to skip independent review with a recorded reason;
-- reassess findings against Issue/contracts/diff/tests/CI rather than accepting them mechanically.
-
-`docs/independent-review.md` is the Foundation operating reference.
+レビューの指摘は仕様・差分・テスト・CIに照らして判断し、機械的に受け入れない。
 
 ## Default Vercel Git integration
 
