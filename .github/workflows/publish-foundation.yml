@@ -66,7 +66,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha' 2>/dev/null || true)"
+          # Matching-refs returns [] for absence; filter exact name rather than treating 404 JSON as a SHA.
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$RELEASE_TAG" > "$RUNNER_TEMP/foundation-tags.json"
+          current="$(jq -r --arg tag "refs/tags/$RELEASE_TAG" '[.[] | select(.ref == $tag) | .object.sha][0] // empty' "$RUNNER_TEMP/foundation-tags.json")"
           if [[ -n "$current" && "$current" != "$GITHUB_SHA" ]]; then
             echo "::error::A conflicting release tag exists. Refusing to move it."
             exit 1

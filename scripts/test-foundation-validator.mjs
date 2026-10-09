@@ -339,6 +339,8 @@ try {
       "contents: write",
       "actions: read",
       "gh release create",
+      "git/matching-refs/tags/",
+      "select(.ref == $tag)",
       "Foundation CI",
     ]) {
       if (!workflow.includes(marker)) throw new Error(`publish workflow missing release contract: ${marker}`);
