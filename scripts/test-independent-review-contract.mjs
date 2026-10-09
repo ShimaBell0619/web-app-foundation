@@ -55,7 +55,7 @@ try {
 
   {
     const dir = makeCopy();
-    mutate(dir, 'AGENTS.md', 'obtain explicit approval', 'proceed without approval', 'Codex approval gate regression');
+    mutate(dir, 'AGENTS.md', '明示的な承認', '承認不要', 'Codex approval gate regression');
     run(dir, false, 'Codex approval gate regression');
   }
 
@@ -64,8 +64,8 @@ try {
     mutate(
       dir,
       'AGENTS.md',
-      'fresh rationale and explicit approval',
-      'reuse the prior approval',
+      '過去の承認は再レビューに流用しない',
+      '過去の承認を流用してよい',
       'Codex re-review approval regression',
     );
     run(dir, false, 'Codex re-review approval regression');
@@ -73,7 +73,7 @@ try {
 
   {
     const dir = makeCopy();
-    mutate(dir, 'AGENTS.md', '## Code Review Rules', '## Review Notes', 'Codex review rules heading regression');
+    mutate(dir, 'AGENTS.md', '### コードレビューの重点', '## Review Notes', 'Codex review rules heading regression');
     run(dir, false, 'Codex review rules heading regression');
   }
 
@@ -118,8 +118,8 @@ try {
     mutate(
       dir,
       '.github/pull_request_template.md',
-      'Codex invocation approval:',
-      'Codex invocation:',
+      '対象としたマージ候補HEAD SHA:',
+      'Review completed:',
       'Codex approval evidence regression',
     );
     run(dir, false, 'Codex approval evidence regression');
@@ -130,8 +130,8 @@ try {
     mutate(
       dir,
       '.github/pull_request_template.md',
-      'Merge-candidate SHA reviewed:',
-      'Review completed:',
+      '主な指摘と採否・修正:',
+      'レビュー完了:',
       'reviewed-SHA evidence regression',
     );
     run(dir, false, 'reviewed-SHA evidence regression');

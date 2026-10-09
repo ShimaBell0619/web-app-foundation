@@ -58,7 +58,7 @@ try {
     mutate(
       dir,
       'docs/ai-implementation.md',
-      (text) => text.replace('\n## Context Routing\n', '\n## Context discovery\n'),
+      (text) => text.replace('\n## ChatからWorkへ引き継ぐ情報\n', '\n## Context discovery\n'),
       'routing guide section',
     );
     run(dir, false, 'routing guide contract removed');
@@ -69,7 +69,7 @@ try {
     mutate(
       dir,
       'AGENTS.md',
-      (text) => text.replace('\n## Context routing\n', '\n## Document selection\n'),
+      (text) => text.replace('\n## 文書とコンテキスト\n', '\n## Document selection\n'),
       'repository routing index',
     );
     run(dir, false, 'AGENTS loses routing index');
@@ -80,7 +80,7 @@ try {
     mutate(
       dir,
       'AGENTS.md',
-      (text) => text.replace('\n## Complexity discipline\n', '\n## Implementation preferences\n'),
+      (text) => text.replace('\n## 設計と過剰な複雑化の抑制\n', '\n## Implementation preferences\n'),
       'complexity discipline',
     );
     run(dir, false, 'anti-overengineering contract removed');
@@ -113,7 +113,7 @@ try {
     mutate(
       dir,
       '.github/pull_request_template.md',
-      (text) => text.replace('## Context routing / Design Intent', '## Implementation notes'),
+      (text) => text.replace('## 設計・影響範囲', '## Implementation notes'),
       'PR context evidence section',
     );
     run(dir, false, 'PR loses context-routing evidence');
