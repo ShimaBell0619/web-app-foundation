@@ -6,9 +6,13 @@
     "@foundation/ci-install-proof": "file:../install-proof"
   },
   "scripts": {
-    "check": "node scripts/verify.mjs check",
-    "typecheck": "node scripts/verify.mjs typecheck",
-    "test": "node scripts/verify.mjs test",
-    "build": "node scripts/verify.mjs build"
+    "check": "node scripts/verify.mjs check && node --check tests/value.test.mjs",
+    "typecheck": "node scripts/verify.mjs typecheck && tsc --noEmit",
+    "test": "node scripts/verify.mjs test && node --test tests/value.test.mjs",
+    "build": "node scripts/verify.mjs build && vite build"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
   }
 }
