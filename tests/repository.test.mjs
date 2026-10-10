@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, copyFileSy
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkInventory, validate } from './validate-docs-inventory.mjs';
+import { checkInventory, validate } from '../scripts/validate-docs-inventory.mjs';
 
 test('the documentation and workflow catalog matches the repository', () => {
   assert.deepEqual(validate(), []);

@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 
-const workflowPath = 'templates/vercel/on-demand-preview/preview.yml';
-const helperPath = 'templates/vercel/on-demand-preview/on-demand-preview.mjs';
+const workflowPath = 'kits/vercel/on-demand-preview/preview.yml';
+const helperPath = 'kits/vercel/on-demand-preview/on-demand-preview.mjs';
 const workflow = parseYaml(readFileSync(workflowPath, 'utf8'));
 const helper = readFileSync(helperPath, 'utf8');
 

@@ -30,7 +30,7 @@ Every default Vercel consumer should keep the branch policy in repository-owned 
 }
 ```
 
-Copy `templates/vercel/vercel-git.json`, or `templates/vercel/vite-spa-vercel.json` for a client-side routed Vite SPA that also needs the fallback rewrite.
+Copy `kits/vercel/vercel-git.json`, or `kits/vercel/vite-spa-vercel.json` for a client-side routed Vite SPA that also needs the fallback rewrite.
 
 Vercel branch rules use minimatch behavior. The slash-safe `**` catch-all is required because plain `*` does not span `/`. Branches such as `feature/foo`, `fix/bar`, and `chore/baz` must therefore be covered by `"**": false`; `main` and trusted `preview/**` refs are explicitly re-enabled.
 
@@ -133,7 +133,7 @@ Do not configure sensitive values broadly for arbitrary Preview branches merely 
 
 ## Vite SPA fallback
 
-A client-side routed Vite SPA may need a fallback for direct subpath navigation/reload. `templates/vercel/vite-spa-vercel.json` includes the default Git policy plus:
+A client-side routed Vite SPA may need a fallback for direct subpath navigation/reload. `kits/vercel/vite-spa-vercel.json` includes the default Git policy plus:
 
 ```json
 {
@@ -148,8 +148,8 @@ Do not copy that catch-all rewrite into applications with real server/API routes
 
 1. Import/connect the GitHub repository to Vercel.
 2. Confirm the Production branch is `main` unless the application deliberately documents another Production branch.
-3. Add repository-owned configuration from `templates/vercel/vercel-git.json`, or the Vite SPA variant.
-4. Copy the On-demand Preview workflow/helper from `templates/vercel/on-demand-preview/` and replace the Foundation workflow placeholder with the reviewed released full commit SHA.
+3. Add repository-owned configuration from `kits/vercel/vercel-git.json`, or the Vite SPA variant.
+4. Copy the On-demand Preview workflow/helper from `kits/vercel/on-demand-preview/` and replace the Foundation workflow placeholder with the reviewed released full commit SHA.
 5. Keep normal feature/PR review in GitHub Actions; do not create Vercel deployments on every push.
 6. Scope Preview configuration to the minimum needed by PR code.
 7. Run the three-path post-adoption smoke.
@@ -223,9 +223,9 @@ The synthetic commit exists only to create a fresh Git event for Vercel while pr
 
 Copy:
 
-- `templates/vercel/on-demand-preview/preview.yml` -> `.github/workflows/preview.yml`
-- `templates/vercel/on-demand-preview/on-demand-preview.mjs` -> `scripts/on-demand-preview.mjs`
-- `templates/vercel/vercel-git.json` -> `vercel.json`, or `templates/vercel/vite-spa-vercel.json` for a client-side routed Vite SPA.
+- `kits/vercel/on-demand-preview/preview.yml` -> `.github/workflows/preview.yml`
+- `kits/vercel/on-demand-preview/on-demand-preview.mjs` -> `scripts/on-demand-preview.mjs`
+- `kits/vercel/vercel-git.json` -> `vercel.json`, or `kits/vercel/vite-spa-vercel.json` for a client-side routed Vite SPA.
 
 Replace `<FULL_FOUNDATION_COMMIT_SHA>` in the copied workflow with the reviewed full commit SHA of the adopted Foundation release. The reusable workflow remains immutable from the consumer's point of view.
 
@@ -471,10 +471,10 @@ The publisher re-checks supersession immediately before mutation.
 
 Copy these application-owned files:
 
-- `templates/vercel/fixed-staging/request-staging.yml` -> `.github/workflows/request-staging.yml`
-- `templates/vercel/fixed-staging/deploy-staging.yml` -> `.github/workflows/deploy-staging.yml`
-- `templates/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`
-- `templates/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`
+- `kits/vercel/fixed-staging/request-staging.yml` -> `.github/workflows/request-staging.yml`
+- `kits/vercel/fixed-staging/deploy-staging.yml` -> `.github/workflows/deploy-staging.yml`
+- `kits/vercel/fixed-staging/cleanup-staging.yml` -> `.github/workflows/cleanup-staging.yml`
+- `kits/vercel/fixed-staging/staging-slot.mjs` -> `scripts/staging-slot.mjs`
 
 Then:
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 const files=readdirSync('.github/workflows').filter(x=>/\.ya?ml$/.test(x)).sort();
-test('only two ordinary Foundation workflows are active',()=>assert.deepEqual(files,['foundation-ci.yml','web-ci.yml']));
+test('only two ordinary Foundation workflows are active',()=>assert.deepEqual(files,['ci.yml','web-ci.yml']));
 for(const filename of files){
   const workflow=parseYaml(readFileSync('.github/workflows/'+filename,'utf8'));
   test(filename+' has a read-only trust boundary',()=>{

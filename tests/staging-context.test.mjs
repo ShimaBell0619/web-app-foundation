@@ -5,7 +5,7 @@ import { parse as parseYaml } from 'yaml';
 
 test('Fixed Staging keeps runner-scoped artifact paths at step scope', () => {
   const workflow = parseYaml(
-    readFileSync('templates/vercel/fixed-staging/deploy-staging.yml', 'utf8'),
+    readFileSync('kits/vercel/fixed-staging/deploy-staging.yml', 'utf8'),
   );
   const resolve = workflow.jobs?.resolve;
   assert.ok(resolve, 'publisher resolve job must exist');

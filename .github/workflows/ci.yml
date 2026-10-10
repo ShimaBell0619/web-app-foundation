@@ -57,4 +57,4 @@ jobs:
     uses: ./.github/workflows/web-ci.yml
     with:
       working_directory: fixtures/consumer
-      cache_dependency_path: fixtures/consumer/package-lock.json
+      cache_dependency_path: tests/fixtures/consumer/package-lock.json
