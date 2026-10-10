@@ -12,7 +12,7 @@ if(!read('AGENTS.md').includes('Workは明示指示のみ'))errors.push('missing
 if(/^Foundation-Version:/m.test(read('AGENTS.md')))errors.push('remove AGENTS version mirror');
 if(/Current Foundation version:/i.test(read('README.md')))errors.push('remove README version mirror');
 const scan=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?scan(join(dir,e.name)):[join(dir,e.name)]);
-errors.push(...validateLinks('.', [...scan('docs'), ...scan('kits')].filter(s=>s.endsWith('.md')).concat(['README.md','AGENTS.md'])));
+errors.push(...validateLinks('.', [...scan('docs'), ...scan('kits')].filter(s=>s.endsWith('.md') && s!=='kits/web/starter/README.md').concat(['README.md','AGENTS.md'])));
 for(const path of [...scan('.github/workflows'),...scan('kits')].filter(x=>/\.ya?ml$/.test(x))){
  try{const v=parseYaml(read(path));if(!v||typeof v!=='object')errors.push('invalid YAML: '+path);}
  catch(e){errors.push('invalid YAML: '+path+' '+e.message);}

@@ -1,0 +1,10 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@__FOUNDATION_SHA__
