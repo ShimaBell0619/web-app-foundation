@@ -42,4 +42,4 @@ PRの`/preview`コメントから、対象HEADのCIを実施したうえで合�
 
 ## 詳細な運用ガイド
 
-UI、Vercel、Azure OIDC、CI、独立レビュー、バージョン管理、GitHubの管理操作は [`docs/README.md`](docs/README.md) から必要な項目だけ参照してください。既存アプリを新しいFoundationの既定値へ合わせるためだけに変更しません。
+UI、Vercel、Azure OIDC、CI、独立レビュー、バージョン管理、GitHubの管理操作は [`docs/README.md`](docs/README.md) から必要な項目だけ参照してください。既存アプリを新しいFoundationの既定値へ合わせるためだけに変更しません。管理権限付きのrepo作成は任意の `kits/github/repository-create/` に隔離しています。

@@ -40,7 +40,6 @@
 | --- | --- | --- |
 | [`.github/workflows/foundation-ci.yml`](../.github/workflows/foundation-ci.yml) | PR・mainへのpush。Foundation検証と消費側CIスモーク | `contents: read`。**常時使用** |
 | [`.github/workflows/web-ci.yml`](../.github/workflows/web-ci.yml) | `workflow_call`。採用先アプリがレビュー済みの40桁SHAで呼ぶ共通品質CI | チェック・テスト・ビルド。**再利用可能** |
-| [`.github/workflows/owner-repo-create.yml`](../.github/workflows/owner-repo-create.yml) | OwnerのIssueに`/create-private-repo`。非公開リポジトリを作成 | `contents: read` + 別途`REPO_CREATION_TOKEN`が必要。**初期権限設定待ち** |
 
 **完了した一時運用**：`publish-foundation.yml`はv0.11.0のIssue #93専用で、[正式Release](https://github.com/ShimaBell0619/web-app-foundation/releases/tag/v0.11.0)の発行とSHA確認が完了しました。再利用できない固定コマンドを持つため、稼働Workflowから削除。実行証拠は[Actions履歴](https://github.com/ShimaBell0619/web-app-foundation/actions/runs/37979791524)とGit履歴に残します。今後のFoundation Releaseは`docs/versioning.md`に従って、その版に対応する検証・承認付き公開経路を用意します。
 
@@ -53,6 +52,8 @@
 | `templates/vercel/fixed-staging/*.yml` | 固定Stagingが必要な場合だけ |
 
 `/ui-review`、`/cleanup-branch`、`/azure-inventory`、`/azure-what-if`、`/deploy-azure`は**SwitchBot等の採用先アプリ固有のWorkflow**であり、Foundation本体の有効Workflowではありません。対象アプリの`AGENTS.md`と`.github/workflows/`を確認してから使います。
+
+**任意管理kit**：`kits/github/repository-create/`はコピー先の管理用リポジトリでのみ稼働し、Foundation自身では起動しません。権限の初期設定は未実施です。
 
 ## 文書とWorkflowを増やす判断
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { createPrivateRepo, validateRepositoryRequest } from "./create-private-repo.mjs";
+import { createPrivateRepo, validateRepositoryRequest } from "../kits/github/repository-create/create-private-repo.mjs";
 
 const owner = "ShimaBell0619";
 const event = {
@@ -69,7 +69,7 @@ test("does not create when repo exists or credential belongs to another user", a
 });
 
 test("trusted workflow never grants its own token write permission", () => {
-  const s = readFileSync(".github/workflows/owner-repo-create.yml", "utf8");
+  const s = readFileSync("kits/github/repository-create/workflow.yml", "utf8");
   assert.ok(s.includes("author_association == 'OWNER'"));
   assert.ok(s.includes("secrets.REPO_CREATION_TOKEN"));
   assert.ok(s.includes("ref: main"));
