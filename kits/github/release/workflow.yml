@@ -6,7 +6,7 @@ on:
     types: [completed]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   # Set to 'true' for a GitHub prerelease milestone.
@@ -14,6 +14,11 @@ env:
 
 jobs:
   release:
+    permissions:
+      contents: write
+    concurrency:
+      group: app-release-${{ github.repository }}
+      cancel-in-progress: false
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -68,6 +73,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          [[ "$main_sha" == "$VALIDATED_SHA" ]] || {
+            echo "::error::main moved after validated CI; refusing release of stale code."
+            exit 1
+          }
 
           resolve_tag_commit() {
             local type sha depth=0
@@ -120,6 +130,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          [[ "$main_sha" == "$VALIDATED_SHA" ]] || {
+            echo "::error::main moved before publication; refusing stale release."
+            exit 1
+          }
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             exit 0
           fi

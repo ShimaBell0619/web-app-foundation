@@ -8,7 +8,9 @@ const job = workflow.jobs?.release;
 assert.ok(job, 'release job must exist');
 assert.deepEqual(workflow.on?.workflow_run?.workflows, ['CI']);
 assert.deepEqual(workflow.on?.workflow_run?.types, ['completed']);
-assert.deepEqual(workflow.permissions, { contents: 'write' });
+assert.deepEqual(workflow.permissions, { contents: 'read' });
+assert.deepEqual(job.permissions, { contents: 'write' });
+assert.equal(job.concurrency['cancel-in-progress'], false);
 
 for (const marker of [
   "workflow_run.conclusion == 'success'",
@@ -38,13 +40,13 @@ for (const marker of ["require('./package.json').version", 'git show HEAD^:packa
 }
 
 const verify = String(step('Verify release target').run ?? '');
-for (const marker of ['resolve_tag_commit', 'git/ref/tags/$TAG', 'git/tags/$sha', 'isDraft', 'VALIDATED_SHA']) {
+for (const marker of ['resolve_tag_commit', 'git/ref/tags/$TAG', 'git/tags/$sha', 'isDraft', 'VALIDATED_SHA', 'git/ref/heads/main', 'main moved after validated CI']) {
   assert.ok(verify.includes(marker), `target verification missing ${marker}`);
 }
 assert.equal(verify.includes('git ls-remote'), false);
 
 const publish = String(step('Publish GitHub Release').run ?? '');
-for (const marker of ['gh release create "$TAG"', '--target "$VALIDATED_SHA"', '--generate-notes', 'A concurrent publisher created $TAG']) {
+for (const marker of ['gh release create "$TAG"', '--target "$VALIDATED_SHA"', '--generate-notes', 'A concurrent publisher created $TAG', 'main moved before publication']) {
   assert.ok(publish.includes(marker), `publish step missing ${marker}`);
 }
 
