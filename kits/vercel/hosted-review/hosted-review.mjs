@@ -197,6 +197,216 @@ export async function newerStagingRequest(client, currentId, createdAt) {
     if (!Array.isArray(items)) throw new Error('invalid GitHub comments response');
     for (const candidate of items) {
       if (candidate?.body !== '/staging' || Number(candidate.id) <= currentId) continue;
+      // A comment on an Issue, fork PR, closed PR or non-main PR is not a valid request.
+      // Re-query the PR because the list-comments payload is not an authorization source.
+      const match = new RegExp('^https://api\\.github\\.com/repos/' +
+        client.repo.replace(/[.*+?^${}()|[\\]\\]/g, '\\      const p = await client.permission(candidate.user?.login ?? '');
+      if (['write', 'maintain', 'admin'].includes(p?.permission)) return true;') + '/issues/([1-9][0-9]*)
+    }
+    if (items.length < 100) return false;
+  }
+  throw new Error('Staging comment audit exceeded safe pagination limit');
+}
+
+export async function authorize(client, event) {
+  const request = requestFromComment(event);
+  await writer(client, request.actor);
+  const pr = await client.pr(request.number);
+  const source = assertSource(pr, client.repo);
+  return { ...request, source };
+}
+
+export async function publish(client, { kind, number, source, id }) {
+  mode(kind);
+  number = prNumber(number);
+  source = sha(source);
+  id = commentId(id);
+  await validateCurrentRequest(client, number, id, kind);
+  assertSource(await client.pr(number), client.repo, source);
+  const original = await client.comment(id);
+  const checkNewest = async () => kind === 'staging' &&
+    await newerStagingRequest(client, id, original.created_at);
+  if (await checkNewest()) return { skipped: 'superseded by a newer authorized /staging request' };
+
+  const tree = verifyGitSource(source);
+  const branch = mode(kind).branch(number);
+  const old = remoteSha(branch);
+  if (kind === 'staging' && !old) throw new Error('staging branch must already exist');
+  let current = old ? localCommit(old) : null;
+  if (isOwnedSource(current, kind, number, source, tree)) return { sha: old, branch, reused: true };
+  if (kind === 'staging') {
+    const mainSha = await client.ref('main');
+    const priorSource = readUniqueTrailer(current.message, 'Source-PR-HEAD');
+    const priorTree = old === mainSha ? null : (SHA.test(priorSource ?? '') ? git(['show', '-s', '--format=%T', priorSource]) : null);
+    const previousId = stagingOccupantRequestId(current, mainSha, priorTree);
+    if (previousId > id) return { skipped: 'Staging is owned by a newer request' };
+  }
+  const synthetic = buildSynthetic(source, tree, kind, number, id);
+  await validateCurrentRequest(client, number, id, kind);
+  assertSource(await client.pr(number), client.repo, source);
+  if (await checkNewest()) return { skipped: 'superseded immediately before ref mutation' };
+  git(leaseArgs(branch, synthetic, old));
+  if (remoteSha(branch) !== synthetic) throw new Error('ref SHA verification failed');
+  return { sha: synthetic, branch, reused: false };
+}
+
+export async function cleanup(client, event) {
+  const pr = event?.pull_request;
+  const number = prNumber(pr?.number);
+  if (pr?.base?.repo?.full_name !== client.repo || pr?.head?.repo?.full_name !== client.repo ||
+      pr?.state !== 'closed') return [];
+  const actions = [];
+  for (const kind of ['preview', 'staging']) {
+    const branch = mode(kind).branch(number);
+    const observed = remoteSha(branch);
+    if (!observed) continue;
+    const current = localCommit(observed);
+    if (!ownedBy(current.message, mode(kind).trailer, number)) continue;
+    if (kind === 'preview') {
+      git(['push', 'origin', ':refs/heads/' + branch, '--force-with-lease=refs/heads/' + branch + ':' + observed]);
+      if (remoteSha(branch)) throw new Error('Preview cleanup failed');
+    } else {
+      const main = await client.ref('main');
+      git(['fetch', '--no-tags', 'origin', main]);
+      git(leaseArgs(branch, main, observed));
+      if (remoteSha(branch) !== main) throw new Error('Staging cleanup failed');
+    }
+    actions.push(branch);
+  }
+  return actions;
+}
+
+export function validateDeploymentPayload(payload, projectId) {
+  // Vercel identifies the fixed staging branch as a Preview environment too.
+  if (payload?.environment !== 'preview') throw new Error('only Vercel Preview deployments are accepted');
+  const branch = required(payload?.git?.ref, 'Vercel ref');
+  const match = /^preview\/pr-([1-9][0-9]*)$/.exec(branch);
+  const kind = branch === 'staging' ? 'staging' : 'preview';
+  if (kind === 'preview' && !match) throw new Error('unexpected deployment ref');
+  const number = match ? prNumber(match[1]) : null;
+  const synthetic = sha(payload?.git?.sha);
+  const id = required(payload?.id, 'deployment ID');
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('invalid deployment ID');
+  if (!['ready', 'success'].includes(payload?.state?.type)) throw new Error('Vercel deployment event is not ready');
+  if (payload?.project?.id !== projectId) throw new Error('unexpected Vercel project');
+  const url = required(payload?.url, 'Vercel URL');
+  if (!/^https:\/\/[a-zA-Z0-9.-]+\.vercel\.app$/.test(url)) throw new Error('invalid deployment URL');
+  return { kind, branch, number, synthetic, id, url };
+}
+export function verifyProviderDeployment(deployment, expected, projectId) {
+  if (deployment?.id !== expected.id || deployment.projectId !== projectId ||
+      deployment.readyState !== 'READY' || deployment.target === 'production' ||
+      deployment.url !== expected.url.slice(8) ||
+      deployment.meta?.githubCommitSha !== expected.synthetic ||
+      deployment.meta?.githubCommitRef !== expected.branch) {
+    throw new Error('Vercel API did not corroborate project, READY, URL, ref and exact SHA');
+  }
+}
+
+export async function notify(client, payload, { projectId, vercelToken, stagingUrl, fetchFn = fetch, teamId = '' }) {
+  projectId = required(projectId, 'VERCEL_PROJECT_ID');
+  const event = validateDeploymentPayload(payload, projectId);
+  const url = 'https://api.vercel.com/v13/deployments/' + encodeURIComponent(event.id) +
+    (teamId ? '?teamId=' + encodeURIComponent(teamId) : '');
+  const response = await fetchFn(url, {
+    headers: { Authorization: 'Bearer ' + required(vercelToken, 'VERCEL_API_TOKEN') },
+  });
+  if (!response.ok) throw new Error('Vercel deployment lookup failed: ' + response.status);
+  verifyProviderDeployment(await response.json(), event, projectId);
+
+  if (await client.ref(event.branch) !== event.synthetic) throw new Error('stale deployment: branch moved');
+  const child = await client.commit(event.synthetic);
+  const number = event.kind === 'staging'
+    ? prNumber(readUniqueTrailer(child.message, 'Foundation-Fixed-Staging-PR'))
+    : event.number;
+  const pr = await client.pr(number);
+  const source = assertSource(pr, client.repo);
+  const parent = await client.commit(source);
+  verifySynthetic(child, parent, event.kind, number);
+  if (event.kind === 'staging') {
+    const owner = readUniqueTrailer(child.message, 'Foundation-Staging-Request-ID');
+    if (!owner || !/^[1-9][0-9]*$/.test(owner)) throw new Error('Staging request provenance missing');
+  }
+
+  let http = 'Not checked';
+  if (event.kind === 'staging') {
+    const fixed = new URL(required(stagingUrl, 'FIXED_STAGING_URL'));
+    if (fixed.protocol !== 'https:' || fixed.username || fixed.password ||
+        !fixed.hostname || fixed.pathname !== '/' || fixed.search || fixed.hash) {
+      throw new Error('FIXED_STAGING_URL must be a plain HTTPS origin');
+    }
+    try {
+      const check = await fetchFn(fixed.href, { method: 'GET', signal: AbortSignal.timeout(10000) });
+      http = check.url.startsWith(fixed.origin + '/') && check.ok
+        ? 'HTTP ' + check.status + ' at fixed origin'
+        : 'HTTP verification failed (status ' + check.status + ')';
+    } catch {
+      http = 'HTTP verification failed (connection or timeout)';
+    }
+  }
+  const marker = '<!-- foundation-review deployment=' + event.id + ' commit=' + event.synthetic + ' -->';
+  const prior = await client.prComments(number);
+  if (prior.some(item => item.user?.login === 'github-actions[bot]' && String(item.body ?? '').includes(marker))) return { duplicate: true };
+  // Recheck after external API/HTTP requests before any write.
+  assertSource(await client.pr(number), client.repo, source);
+  if (await client.ref(event.branch) !== event.synthetic) throw new Error('deployment was superseded before notification');
+  const message = [
+    (event.kind === 'preview' ? 'Preview' : 'Fixed Staging') + ' deployment verified with Vercel API.',
+    '',
+    '- Deployment URL: ' + event.url,
+    '- Ref: ' + event.branch,
+    '- Source A: ' + source,
+    '- Synthetic B: ' + event.synthetic,
+    '- Vercel deployment: ' + event.id,
+    ...(event.kind === 'staging' ? ['- Fixed URL: ' + stagingUrl, '- Fixed URL check: ' + http] : []),
+    '- Real browser/UI verification: **not performed**.',
+    '',
+    marker,
+  ].join('\n');
+  await client.postComment(number, message);
+  return { notified: true, http };
+}
+
+async function main() {
+  const cmd = process.argv[2];
+  const client = createGitHubClient({
+    token: process.env.GH_TOKEN,
+    repository: process.env.GITHUB_REPOSITORY,
+  });
+  const event = JSON.parse(readFileSync(required(process.env.GITHUB_EVENT_PATH, 'GITHUB_EVENT_PATH'), 'utf8'));
+  if (cmd === 'authorize') {
+    const result = await authorize(client, event);
+    output('kind', result.kind);
+    output('pr_number', result.number);
+    output('source_sha', result.source);
+    output('comment_id', result.id);
+  } else if (cmd === 'publish') {
+    const result = await publish(client, {
+      kind: process.env.REVIEW_KIND,
+      number: process.env.PR_NUMBER,
+      source: process.env.SOURCE_SHA,
+      id: process.env.COMMENT_ID,
+    });
+    summary(['## Hosted review ref state', '', JSON.stringify(result), '',
+      'Git ref update alone does not prove Vercel deployment, fixed origin HTTP or rendered UI.']);
+  } else if (cmd === 'cleanup') {
+    summary(['## Owned refs cleaned up', '', ...(await cleanup(client, event))]);
+  } else if (cmd === 'notify') {
+    summary(['## Hosted review provider verification', '', JSON.stringify(await notify(client, event.client_payload, {
+      projectId: process.env.VERCEL_PROJECT_ID,
+      vercelToken: process.env.VERCEL_API_TOKEN,
+      stagingUrl: process.env.FIXED_STAGING_URL,
+      teamId: process.env.VERCEL_TEAM_ID,
+    }))]);
+  } else throw new Error('usage: hosted-review.mjs <authorize|publish|notify|cleanup>');
+}
+const direct = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (direct) main().catch(error => { console.error(error); process.exitCode = 1; });
+).exec(candidate.issue_url ?? '');
+      if (!match) continue;
+      const number = prNumber(match[1]);
+      const pr = await client.pr(number);
+      if (!sameRepoPr(pr, client.repo)) continue;
       const p = await client.permission(candidate.user?.login ?? '');
       if (['write', 'maintain', 'admin'].includes(p?.permission)) return true;
     }
