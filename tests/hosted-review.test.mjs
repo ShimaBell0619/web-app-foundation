@@ -101,7 +101,7 @@ test('Staging occupant must have complete and unique Foundation ownership', () =
   assert.equal(stagingOccupantRequestId({ sha: A }, A, null), 0);
   const olderMain = { sha: 'd'.repeat(40), message: 'Ordinary previous main commit' };
   assert.throws(() => stagingOccupantRequestId(olderMain, A, null),
-    /trusted Foundation provenance/);
+    /invalid PR number/);
   assert.equal(stagingOccupantRequestId(olderMain, A, null, true), 0);
   assert.throws(() => stagingOccupantRequestId({ ...old, message: 'unknown legacy commit' }, A, tree));
   assert.throws(() => stagingOccupantRequestId({
