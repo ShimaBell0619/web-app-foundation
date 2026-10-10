@@ -5,7 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import {
   requestFromComment, assertSource, leaseArgs, verifySynthetic,
   createGitHubClient, authorize, newerStagingRequest,
-  validateDeploymentPayload, verifyProviderDeployment, notify,
+  validateDeploymentPayload, verifyProviderDeployment, notify, stagingOccupantRequestId,
 } from '../kits/vercel/hosted-review/hosted-review.mjs';
 
 const repo = 'example/app';
@@ -95,6 +95,17 @@ test('synthetic child and SHA leases reject wrong parents, tree and owner', () =
   assert.throws(() => verifySynthetic({ ...child, message: child.message + '\nSource-PR-HEAD: ' + A }, parent, 'staging', 42));
 });
 
+test('Staging occupant must have complete and unique Foundation ownership', () => {
+  const old = { sha: B, parent: A, tree, message: child.message };
+  assert.equal(stagingOccupantRequestId(old, A, tree), 500);
+  assert.equal(stagingOccupantRequestId({ sha: A }, A, null), 0);
+  assert.throws(() => stagingOccupantRequestId({ ...old, message: 'unknown legacy commit' }, A, tree));
+  assert.throws(() => stagingOccupantRequestId({
+    ...old, message: child.message + '\\nFoundation-Staging-Request-ID: 501',
+  }, A, tree));
+  assert.throws(() => stagingOccupantRequestId({ ...old, tree: 'd'.repeat(40) }, A, tree));
+});
+
 test('Staging only rejects older requests if later request is authorized', async () => {
   const comments = [{ id: 501, body: '/staging', user: { login: 'outsider' } }];
   const client = { comments: async () => comments,
@@ -114,7 +125,7 @@ test('self-asserted webhook cannot override provider or GitHub source evidence',
   const posts = [];
   const github = { repo, pr: async () => pr, ref: async () => B,
     commit: async hash => hash === B ? child : parent,
-    prComments: async () => posts.map(body => ({ body })),
+    prComments: async () => posts.map(body => ({ body, user: { login: 'github-actions[bot]' } })),
     postComment: async (_number, body) => { posts.push(body); } };
   const options = { projectId: project, vercelToken: 'test', stagingUrl: 'https://staging.example.com/',
     fetchFn: async url => response(url.includes('api.vercel.com') ? provider : null) };
