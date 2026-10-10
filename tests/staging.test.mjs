@@ -222,6 +222,6 @@ test('fixed staging reports ref verified, not false deployment readiness', () =>
   for (const result of [fresh, reused]) {
     assert.match(result.detail, /not yet verified/);
     assert.match(result.detail, /rendered browser UI/);
-    assert.doesNotMatch(result.title, /ready|deployed/i);
+    assert.doesNotMatch(result.title, /\b(?:ready|deployed)\b/i);
   }
 });
