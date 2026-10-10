@@ -45,3 +45,22 @@ mainへのpushでGitHub CIとVercel buildは独立して進みます。CI失敗�
 - 実Vercelの配備ポリシー、記録、固定URL、ブラウザを採用先で検証する。Foundationの単体テストだけで実プロバイダー実証済みとしない。
 
 操作・復旧は [operations.md](../../docs/operations.md)、採用は [adoption.md](../../docs/adoption.md)、共通規則は [AGENTS.md](../../AGENTS.md) を参照してください。
+
+## 作成APIの500・結果不明時の復旧
+
+この手順は、対象account／team、repo、project名と作成が既に承認済みの場合に限ります。500は「未作成」の証拠ではありません。
+
+1. 送信した入力とrequest ID（取得できる場合）を記録し、同じscopeで [GET /v9/projects/{idOrName}](https://vercel.com/docs/rest-api/projects/find-a-project-by-id-or-name) を実行します。
+2. projectが存在すれば、ID、account／team、Git repo、framework、root、build設定を照合します。相違や認証エラーは中止します。作成POSTを再送しません。
+3. 不存在が確認できた場合だけ、既存の認証済み直接APIまたは認証済みCLIから [POST /v11/projects](https://vercel.com/docs/rest-api/projects/create-a-new-project) を同じ承認済み入力で実行します。単一の404でもscope・権限が不明なら不存在と断定しません。接続からtokenを抽出したり、資格情報をChatへ貼らせたりしません。
+4. 代替経路が使えなければVercel画面でのGit importを使います。自動的にWorkを起動しません。作成成功後もGETで実状態を再確認します。
+5. projectとGit接続があるのに初回配備だけがない場合は、作成を繰り返さずDeployment一覧を確認します。必要なら [POST /v13/deployments](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment) へ既存project ID、承認済みrepo／正確なGit SHA、targetを渡します。Deployment POSTの結果不明時も一覧でsource SHAとIDを照合してから判断します。
+6. READYまでrun／Deployment IDを追跡し、repo・source SHA・target・projectを照合します。Production aliasが同じDeploymentを指すことを再取得して確認し、そのDeployment URLと公開URLをブラウザで検証します。旧版HTTP 200を新版の成功として扱いません。
+
+### Simple方式の障害復旧
+
+壊れた版を公開した場合は、承認済みの範囲で既知の正常版へのrevertまたは [Instant Rollback](https://vercel.com/docs/instant-rollback) を選びます。Hobbyは直前のProduction Deploymentへのrollbackが対象です。rollback後はProduction domainの自動割当が停止するため、修正版を確認してpromoteし、割当が復旧したことを確認します。機能があるだけで復旧を実証済みとしません。
+
+## 証拠の記録
+
+CI runとcheckout SHA、project／Deployment ID、Git source SHA、READY、alias照合、ブラウザURL・viewport・画像・主要操作を採用先の検証文書に記録します。公開テストにCIのGITHUB_SHAを無条件で転用しません。既定では公開テスト用tokenをGitHub CIへ追加しません。
