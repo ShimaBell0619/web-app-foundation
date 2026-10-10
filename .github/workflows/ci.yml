@@ -46,3 +46,4 @@ jobs:
     with:
       working_directory: kits/web/starter
       cache_dependency_path: kits/web/starter/package-lock.json
+      run_e2e: true

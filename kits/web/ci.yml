@@ -8,3 +8,5 @@ permissions:
 jobs:
   verify:
     uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@__FOUNDATION_SHA__
+    with:
+      run_e2e: true
