@@ -141,6 +141,18 @@ export function isOwnedSource(commit, kind, number, source, tree) {
   return commit && commit.parent === source && commit.tree === tree &&
     matchesSource(commit.message, mode(kind).trailer, number, source);
 }
+
+export function stagingOccupantRequestId(commit, mainSha, sourceTree) {
+  if (!commit || !SHA.test(mainSha)) throw new Error('missing trusted Staging occupant');
+  if (commit.sha === mainSha) return 0;
+  const number = prNumber(readUniqueTrailer(commit.message, 'Foundation-Fixed-Staging-PR'));
+  const source = sha(readUniqueTrailer(commit.message, 'Source-PR-HEAD'));
+  const id = commentId(readUniqueTrailer(commit.message, 'Foundation-Staging-Request-ID'));
+  if (!isOwnedSource(commit, 'staging', number, source, sourceTree)) {
+    throw new Error('refusing to overwrite a Staging ref without trusted Foundation provenance');
+  }
+  return id;
+}
 function buildSynthetic(source, tree, kind, number, id) {
   const trailer = mode(kind).trailer;
   const lines = [
@@ -219,9 +231,12 @@ export async function publish(client, { kind, number, source, id }) {
   if (kind === 'staging' && !old) throw new Error('staging branch must already exist');
   let current = old ? localCommit(old) : null;
   if (isOwnedSource(current, kind, number, source, tree)) return { sha: old, branch, reused: true };
-  if (kind === 'staging' && current) {
-    const prev = readUniqueTrailer(current.message, 'Foundation-Staging-Request-ID');
-    if (prev && Number(prev) > id) return { skipped: 'Staging is owned by a newer request' };
+  if (kind === 'staging') {
+    const mainSha = await client.ref('main');
+    const priorSource = readUniqueTrailer(current.message, 'Source-PR-HEAD');
+    const priorTree = old === mainSha ? null : (SHA.test(priorSource ?? '') ? git(['show', '-s', '--format=%T', priorSource]) : null);
+    const previousId = stagingOccupantRequestId(current, mainSha, priorTree);
+    if (previousId > id) return { skipped: 'Staging is owned by a newer request' };
   }
   const synthetic = buildSynthetic(source, tree, kind, number, id);
   await validateCurrentRequest(client, number, id, kind);
@@ -328,7 +343,7 @@ export async function notify(client, payload, { projectId, vercelToken, stagingU
   }
   const marker = '<!-- foundation-review deployment=' + event.id + ' commit=' + event.synthetic + ' -->';
   const prior = await client.prComments(number);
-  if (prior.some(item => String(item.body ?? '').includes(marker))) return { duplicate: true };
+  if (prior.some(item => item.user?.login === 'github-actions[bot]' && String(item.body ?? '').includes(marker))) return { duplicate: true };
   // Recheck after external API/HTTP requests before any write.
   assertSource(await client.pr(number), client.repo, source);
   if (await client.ref(event.branch) !== event.synthetic) throw new Error('deployment was superseded before notification');
