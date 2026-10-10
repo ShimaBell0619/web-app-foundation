@@ -96,6 +96,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
       FIXED_STAGING_URL: ${{ vars.FIXED_STAGING_URL }}
     steps:
       - name: Checkout trusted main automation
