@@ -20,9 +20,9 @@ const child = {
   sha: B, parents: [{ sha: A }], tree: { sha: tree },
   message: 'Owned\n\nFoundation-Fixed-Staging-PR: 42\nSource-PR-HEAD: ' + A + '\nFoundation-Staging-Request-ID: 500',
 };
-const payload = { environment: 'staging', prNumber: 42, project: { id: project },
+const payload = { environment: 'preview', project: { id: project },
   git: { ref: 'staging', sha: B }, id: 'dpl_123',
-  state: { type: 'success' }, url: 'https://preview.vercel.app' };
+  state: { type: 'ready' }, url: 'https://preview.vercel.app' };
 const provider = { id: 'dpl_123', projectId: project, readyState: 'READY',
   url: 'preview.vercel.app', meta: { githubCommitRef: 'staging', githubCommitSha: B } };
 function response(body, status = 200) {
@@ -35,7 +35,7 @@ test('one installable workflow has separate exact-source and write boundaries', 
   assert.deepEqual(Object.keys(workflow.jobs), ['authorize', 'validate-source', 'publish', 'notify', 'cleanup']);
   assert.deepEqual(workflow.on.issue_comment.types, ['created']);
   assert.deepEqual(workflow.on.pull_request_target.types, ['closed']);
-  assert.deepEqual(workflow.on.repository_dispatch.types, ['vercel.deployment.success']);
+  assert.deepEqual(workflow.on.repository_dispatch.types, ['vercel.deployment.ready']);
   assert.match(workflow.jobs.authorize.if, /\/preview.*\/staging/s);
   assert.equal(workflow.concurrency['cancel-in-progress'], false);
   assert.equal(workflow.concurrency.queue, 'max');
