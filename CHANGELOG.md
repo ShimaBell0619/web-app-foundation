@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0
+
+### Minor Changes
+
+- 779cba7: **BREAKING:** Previewと固定Stagingの公開経路を、PRコメントの `/preview`・`/staging` を処理する単一の任意導入kitへ統合。信頼済みmainで実行するpublisher、検証済みPR HEADのexact-SHA CI、所有者検証、Stagingの競合制御とSHA leaseを維持。Vercel APIによるREADY確認を追加し、従来の個別Workflowを廃止。既存採用先は自動移行しない。
+- 779cba7: Preview・Stagingの共通provenance検証を強化し、PRとソースSHAを厳密に照合する。ref更新はデプロイ完了を意味せず、実際の公開状態・HTTP応答・ブラウザ画面を区別する。
+- 779cba7: アプリ用GitHub Release処理の書き込み権限を公開ジョブだけに限定し、並行公開と検証後にmainが動いた場合の誤公開を防止する。
+
 ## 0.11.0
 
 ### Minor Changes
