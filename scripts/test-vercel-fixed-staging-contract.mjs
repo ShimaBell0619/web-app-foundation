@@ -194,9 +194,9 @@ test('synthetic Staging provenance gives cleanup explicit PR ownership', () => {
   assert.equal(stagingOwnershipMatches(message, 420), false);
   assert.equal(sourceMarkers(message, 4, SHA_A), false);
   assert.equal(stagingOwnershipMatches(message.replace('PR: 42', 'PR: 420'), 42), false);
-  assert.equal(stagingOwnershipMatches(message + '\\nFoundation-Fixed-Staging-PR: 42', 42), false);
-  assert.equal(sourceMarkers(message + '\\nSource-PR-HEAD: ' + SHA_A, 42, SHA_A), false);
-  assert.equal(sourceMarkers('xFoundation-Fixed-Staging-PR: 42\\nSource-PR-HEAD: ' + SHA_A, 42, SHA_A), false);
+  assert.equal(stagingOwnershipMatches(message + '\nFoundation-Fixed-Staging-PR: 42', 42), false);
+  assert.equal(sourceMarkers(message + '\nSource-PR-HEAD: ' + SHA_A, 42, SHA_A), false);
+  assert.equal(sourceMarkers('xFoundation-Fixed-Staging-PR: 42\nSource-PR-HEAD: ' + SHA_A, 42, SHA_A), false);
 });
 
 test('helper preserves exact-A revalidation and content-identical synthetic invariants', () => {
