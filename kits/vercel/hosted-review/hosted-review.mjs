@@ -259,16 +259,17 @@ export async function cleanup(client, event) {
 }
 
 export function validateDeploymentPayload(payload, projectId) {
-  const kind = required(payload?.environment, 'deployment environment');
-  mode(kind);
+  // Vercel identifies the fixed staging branch as a Preview environment too.
+  if (payload?.environment !== 'preview') throw new Error('only Vercel Preview deployments are accepted');
   const branch = required(payload?.git?.ref, 'Vercel ref');
-  const match = kind === 'preview' ? /^preview\/pr-([1-9][0-9]*)$/.exec(branch) : branch === 'staging' ? ['staging', payload?.prNumber] : null;
-  if (!match) throw new Error('unexpected deployment ref');
-  const number = prNumber(match[1]);
+  const match = /^preview\/pr-([1-9][0-9]*)$/.exec(branch);
+  const kind = branch === 'staging' ? 'staging' : 'preview';
+  if (kind === 'preview' && !match) throw new Error('unexpected deployment ref');
+  const number = match ? prNumber(match[1]) : null;
   const synthetic = sha(payload?.git?.sha);
   const id = required(payload?.id, 'deployment ID');
   if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('invalid deployment ID');
-  if (payload?.state?.type !== 'success') throw new Error('deployment is not successful');
+  if (!['ready', 'success'].includes(payload?.state?.type)) throw new Error('Vercel deployment event is not ready');
   if (payload?.project?.id !== projectId) throw new Error('unexpected Vercel project');
   const url = required(payload?.url, 'Vercel URL');
   if (!/^https:\/\/[a-zA-Z0-9.-]+\.vercel\.app$/.test(url)) throw new Error('invalid deployment URL');
@@ -276,7 +277,8 @@ export function validateDeploymentPayload(payload, projectId) {
 }
 export function verifyProviderDeployment(deployment, expected, projectId) {
   if (deployment?.id !== expected.id || deployment.projectId !== projectId ||
-      deployment.readyState !== 'READY' || deployment.url !== expected.url.slice(8) ||
+      deployment.readyState !== 'READY' || deployment.target === 'production' ||
+      deployment.url !== expected.url.slice(8) ||
       deployment.meta?.githubCommitSha !== expected.synthetic ||
       deployment.meta?.githubCommitRef !== expected.branch) {
     throw new Error('Vercel API did not corroborate project, READY, URL, ref and exact SHA');
@@ -294,12 +296,15 @@ export async function notify(client, payload, { projectId, vercelToken, stagingU
   if (!response.ok) throw new Error('Vercel deployment lookup failed: ' + response.status);
   verifyProviderDeployment(await response.json(), event, projectId);
 
-  const pr = await client.pr(event.number);
-  const source = assertSource(pr, client.repo);
   if (await client.ref(event.branch) !== event.synthetic) throw new Error('stale deployment: branch moved');
   const child = await client.commit(event.synthetic);
+  const number = event.kind === 'staging'
+    ? prNumber(readUniqueTrailer(child.message, 'Foundation-Fixed-Staging-PR'))
+    : event.number;
+  const pr = await client.pr(number);
+  const source = assertSource(pr, client.repo);
   const parent = await client.commit(source);
-  verifySynthetic(child, parent, event.kind, event.number);
+  verifySynthetic(child, parent, event.kind, number);
   if (event.kind === 'staging') {
     const owner = readUniqueTrailer(child.message, 'Foundation-Staging-Request-ID');
     if (!owner || !/^[1-9][0-9]*$/.test(owner)) throw new Error('Staging request provenance missing');
@@ -322,10 +327,10 @@ export async function notify(client, payload, { projectId, vercelToken, stagingU
     }
   }
   const marker = '<!-- foundation-review deployment=' + event.id + ' commit=' + event.synthetic + ' -->';
-  const prior = await client.prComments(event.number);
+  const prior = await client.prComments(number);
   if (prior.some(item => String(item.body ?? '').includes(marker))) return { duplicate: true };
   // Recheck after external API/HTTP requests before any write.
-  assertSource(await client.pr(event.number), client.repo, source);
+  assertSource(await client.pr(number), client.repo, source);
   if (await client.ref(event.branch) !== event.synthetic) throw new Error('deployment was superseded before notification');
   const message = [
     (event.kind === 'preview' ? 'Preview' : 'Fixed Staging') + ' deployment verified with Vercel API.',
@@ -340,7 +345,7 @@ export async function notify(client, payload, { projectId, vercelToken, stagingU
     '',
     marker,
   ].join('\n');
-  await client.postComment(event.number, message);
+  await client.postComment(number, message);
   return { notified: true, http };
 }
 
