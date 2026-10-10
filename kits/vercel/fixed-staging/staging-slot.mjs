@@ -196,6 +196,13 @@ async function isSuperseded(client, workflowFile, runId) {
   return newerManualRunExists(runId, await client.listManualRuns(workflowFile));
 }
 
+export function stagingRefPublicationStatus(reused) {
+  return {
+    title: reused ? 'Fixed Staging Git ref already matched this source.' : 'Fixed Staging Git ref updated.',
+    detail: 'Git ref verified only. Vercel deployment, stable URL availability and rendered browser UI are not yet verified.',
+  };
+}
+
 async function publishStaging(client, repository) {
   const prNumber = parsePrNumber(process.env.PR_NUMBER);
   const sourceSha = assertSha(process.env.SOURCE_SHA, 'SOURCE_SHA');
@@ -282,8 +289,9 @@ async function publishStaging(client, repository) {
     if (verified !== syntheticSha) throw new Error('Fixed Staging ref verification failed.');
   }
 
+  const status = stagingRefPublicationStatus(reused);
   const comment = [
-    reused ? 'Fixed Staging already matches this PR source.' : 'Fixed Staging updated.',
+    status.title,
     '',
     `- URL: ${stagingUrl}`,
     `- PR: #${prNumber}`,
@@ -296,18 +304,19 @@ async function publishStaging(client, repository) {
     await client.commentOnPullRequest(prNumber, comment);
   } catch (error) {
     console.warn(
-      `Fixed Staging is ready, but PR feedback could not be posted: ${error instanceof Error ? error.message : String(error)}`,
+      `Fixed Staging ref updated, but PR feedback could not be posted: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
   writeSummary([
-    '## Fixed Staging ready',
+    '## Fixed Staging Git ref verified (not deployed)',
     '',
     `- PR: #${prNumber}`,
     `- Source A: \`${sourceSha}\``,
     `- Synthetic B: \`${syntheticSha}\``,
     `- URL: ${stagingUrl}`,
     `- Reused: ${reused}`,
+    `- Verification: ${status.detail}`,
   ]);
 }
 

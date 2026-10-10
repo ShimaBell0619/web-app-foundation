@@ -9,6 +9,7 @@ import {
   parseStagingRequest,
   sourceMarkers,
   stagingOwnershipMatches,
+  stagingRefPublicationStatus,
   validateDeployablePullRequest,
 } from '../kits/vercel/fixed-staging/staging-slot.mjs';
 
@@ -211,4 +212,16 @@ test('helper preserves exact-A revalidation and content-identical synthetic inva
     '--force-with-lease=',
     'stagingOwnershipMatches(message, prNumber)',
   ]) assert.ok(helper.includes(marker), `missing Fixed Staging invariant: ${marker}`);
+});
+
+test('fixed staging reports ref verified, not false deployment readiness', () => {
+  const fresh = stagingRefPublicationStatus(false);
+  const reused = stagingRefPublicationStatus(true);
+  assert.match(fresh.title, /Git ref updated/);
+  assert.match(reused.title, /Git ref already matched/);
+  for (const result of [fresh, reused]) {
+    assert.match(result.detail, /not yet verified/);
+    assert.match(result.detail, /rendered browser UI/);
+    assert.doesNotMatch(result.title, /\b(?:ready|deployed)\b/i);
+  }
 });
