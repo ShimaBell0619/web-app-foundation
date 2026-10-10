@@ -28,7 +28,7 @@ An application should keep a small provenance record, for example in `docs/FOUND
 ```markdown
 # Foundation provenance
 
-- Adopted Foundation version: 0.10.0
+- Adopted Foundation version: <adopted released version>
 - Copied-rule/template commit: <full commit SHA>
 - Reusable workflow commit: <full commit SHA>
 - Adopted on: YYYY-MM-DD

@@ -43,6 +43,12 @@ Chat：各段階の証拠と残存リスクを報告
 - Azure：読み取り、What-if、変更、削除を区別し、実行対象のSubscription/RGとRBACを確認。GitHub OIDCによる既存の専用Workflowを優先し、任意のコマンド文字列をPRコメントから特権付きシェルへ渡さない。
 - 書き込みと検証は別のフェーズ。権限のあるWorkflowで未信頼PRコードを実行しない。秘密情報やOIDCトークンをChat/PR/ログへ表示しない。成果物・実行ID・各段階の成功可否を残す。
 
+#### GitHubでの新規非公開リポジトリ作成（権限設定後のみ）
+
+Foundation自身の`owner-repo-create.yml`は、Ownerが作成した`repo-create: <safe-name>`という題名のIssueに、Ownerが正確に`/create-private-repo`とコメントした場合だけ、固定のGitHub REST APIで**private**リポジトリを作成する。既存リポジトリがあれば中止し、ユーザー、Issue作者、Token所有者が一致することも検証する。
+
+**初期設定がまだ必要**：GitHubで期限と権限を限定した新規リポジトリ作成権限付きユーザートークンを用意し、FoundationのGitHub Actions Repository secret `REPO_CREATION_TOKEN`に保存する。TokenをChat、Issue、PR、Workflowログへ貼らない。通常の`GITHUB_TOKEN`だけでは新規の個人所有リポジトリを作成できない。権限付与がない状態をツールの迂回や自動Work移管で代替しない。詳細・初回設定の残作業は[Issue #91](https://github.com/ShimaBell0619/web-app-foundation/issues/91)を参照する。
+
 ## 着手前に確認すること
 
 1. Issueまたは依頼の目的、受け入れ条件、変更しない既存動作を把握する。小規模な作業に長い計画書は不要。
