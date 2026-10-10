@@ -136,3 +136,10 @@ runCase('E2E enabled with script', {
 });
 
 console.log('Reusable Web CI script-contract tests passed.');
+
+const evidence = verifySteps.find(step => step.name === 'Save browser evidence');
+assert.equal(evidence.if, '${{ always() && inputs.run_e2e }}');
+assert.equal(evidence.with['retention-days'], 7);
+assert.match(evidence.uses, /^actions\/upload-artifact@[a-f0-9]{40}$/);
+assert.match(evidence.with.path, /test-results/);
+assert.match(evidence.with.path, /playwright-report/);

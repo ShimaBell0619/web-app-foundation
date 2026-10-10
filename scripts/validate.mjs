@@ -11,7 +11,7 @@ if(pkg.version!==lock.version||pkg.version!==lock.packages?.['']?.version)errors
 if(!read('AGENTS.md').includes('Workは明示指示のみ'))errors.push('missing Work explicit opt-in');
 if(/^Foundation-Version:/m.test(read('AGENTS.md')))errors.push('remove AGENTS version mirror');
 if(/Current Foundation version:/i.test(read('README.md')))errors.push('remove README version mirror');
-const scan=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?scan(join(dir,e.name)):[join(dir,e.name)]);
+const scan=dir=>readdirSync(dir,{withFileTypes:true}).filter(e=>!['node_modules','dist','test-results','playwright-report'].includes(e.name)).flatMap(e=>e.isDirectory()?scan(join(dir,e.name)):[join(dir,e.name)]);
 errors.push(...validateLinks('.', [...scan('docs'), ...scan('kits')].filter(s=>s.endsWith('.md') && s!=='kits/web/starter/README.md').concat(['README.md','AGENTS.md'])));
 for(const path of [...scan('.github/workflows'),...scan('kits')].filter(x=>/\.ya?ml$/.test(x))){
  try{const v=parseYaml(read(path));if(!v||typeof v!=='object')errors.push('invalid YAML: '+path);}

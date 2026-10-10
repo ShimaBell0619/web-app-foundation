@@ -153,3 +153,14 @@ jobs:
         if: ${{ inputs.run_e2e }}
         working-directory: ${{ inputs.working_directory }}
         run: npm run test:e2e
+
+      - name: Save browser evidence
+        if: ${{ always() && inputs.run_e2e }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ inputs.working_directory }}/test-results/
+            ${{ inputs.working_directory }}/playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
