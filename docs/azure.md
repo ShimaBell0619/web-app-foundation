@@ -1,53 +1,11 @@
-# GitHub Actions to Azure with OIDC
+# Azureの認証・操作
 
-This document records a proven authentication/bootstrap pattern for applications that need GitHub Actions to operate Azure resources without a client secret.
+## 安全な既定
+Microsoft Entra FIC（Federated Identity Credential）はGitHubが提示する主体を確認し、Azure RBACはその主体が操作できる範囲を限定します。両者を混同してはいけません。可能ならGitHub repository_idとmainまたは保護EnvironmentをFICに限定し、Subscription/Resource Group/Resource単位で最小RBACを付けます。Flexible FICを利用するときはsubとimmutable claimを照合します。
 
-It is provider-specific guidance, not a reusable Azure deployment framework. Applications remain responsible for their own Azure resource lifecycle, Bicep/Terraform, deployment workflow, and RBAC scope.
+owner-wideや任意refを許すFICは既定にしません。read、What-if、apply、deleteを区別し、権限・承認・復旧手順を確認します。fork/未信頼PRから本番OIDC identityを使わせず、secretをChat、Artifact、PRに表示しません。
 
-## Boundary
-
-There are two independent authorization layers:
-
-1. **Microsoft Entra federated identity credential (FIC)** decides which GitHub OIDC assertions may sign in as the application/service principal.
-2. **Azure RBAC** decides what that identity may do after sign-in.
-
-A successful OIDC login does not imply Owner/User Access Administrator privileges. Keep RBAC aligned with the operations the application actually needs.
-
-Never add an `AZURE_CLIENT_SECRET` merely to work around a FIC mismatch.
-
-## GitHub immutable/stable subject behavior
-
-A real `ms-credentials-tracker` GitHub Actions run emitted a subject shaped like:
-
-```text
-repo:<owner>@<owner-id>/<repo>@<repo-id>:ref:refs/heads/main
-```
-
-A historical name-only FIC such as:
-
-```text
-repo:<owner>/<repo>:ref:refs/heads/main
-```
-
-therefore did not match and Microsoft Entra returned `AADSTS700213`.
-
-For GitHub Flexible Federated Identity Credentials, Microsoft requires the expression to match `sub` and at least one immutable claim: `repository_id` and/or `repository_owner_id`.
-
-## Convenience-first owner-wide Flexible FIC
-
-For a personal owner that deliberately prioritizes convenience across current and future repositories, one Flexible FIC can trust repositories owned by that numeric GitHub owner ID.
-
-Example:
-
-```text
-claims['sub'] matches 'repo:<OWNER>@<OWNER_ID>/*:*' and claims['repository_owner_id'] eq '<OWNER_ID>'
-```
-
-This intentionally allows multiple repositories, refs, and workflows under that owner. It avoids an Entra change every time a repository is created.
-
-This is a broad trust boundary. A stricter deployment can additionally constrain repository IDs, refs, environments, or `job_workflow_ref`. Choose the expression deliberately and record the chosen boundary in the consuming repository.
-
-Flexible FIC is a Microsoft Entra preview capability as of 2026-09. Azure CLI/PowerShell/Terraform do not yet have first-class Flexible FIC management support; Azure Portal or Microsoft Graph/`az rest` are the supported management paths.
+## 設定・運用の詳細
 
 ## Azure Portal setup
 

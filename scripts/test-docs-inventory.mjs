@@ -11,7 +11,7 @@ test('the documentation and workflow catalog matches the repository', () => {
 });
 
 const guide = readFileSync('docs/README.md', 'utf8');
-const docs = ['docs/ai-implementation.md', 'docs/adoption.md'];
+const docs = ['docs/operations.md', 'docs/adoption.md'];
 const workflows = ['.github/workflows/foundation-ci.yml'];
 
 test('missing or stale docs and workflows fail closed', () => {
