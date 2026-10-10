@@ -1,21 +1,18 @@
-name: On-demand Vercel Preview
+name: On-demand Hosted Review
 
 on:
   issue_comment:
     types: [created]
   repository_dispatch:
-    types: [vercel.deployment.success]
+    types: [vercel.deployment.ready]
   pull_request_target:
     types: [closed]
 
 permissions: {}
 
+# One serialized lane for concurrent requests and cleanup.
 concurrency:
-  group: >-
-    hosted-preview-${{ github.event.issue.number ||
-      github.event.pull_request.number ||
-      github.event.client_payload.git.ref ||
-      github.run_id }}
+  group: hosted-review-${{ github.repository }}
   cancel-in-progress: false
   queue: max
 
@@ -24,41 +21,38 @@ jobs:
     if: >-
       ${{ github.event_name == 'issue_comment' &&
           github.event.issue.pull_request &&
-          github.event.comment.body == '/preview' }}
+          (github.event.comment.body == '/preview' || github.event.comment.body == '/staging') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
       pull-requests: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
     outputs:
-      pr_number: ${{ steps.authorize.outputs.pr_number }}
-      source_sha: ${{ steps.authorize.outputs.source_sha }}
-      preview_branch: ${{ steps.authorize.outputs.preview_branch }}
+      kind: ${{ steps.request.outputs.kind }}
+      pr_number: ${{ steps.request.outputs.pr_number }}
+      source_sha: ${{ steps.request.outputs.source_sha }}
+      comment_id: ${{ steps.request.outputs.comment_id }}
     env:
       GH_TOKEN: ${{ github.token }}
-      REPOSITORY: ${{ github.repository }}
     steps:
       - name: Checkout trusted main automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-          fetch-depth: 1
           persist-credentials: false
-
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
-
-      - name: Authorize Preview request
-        id: authorize
-        run: node scripts/on-demand-preview.mjs authorize
+      - name: Authorize exact PR comment and resolve source A
+        id: request
+        run: node kits/vercel/hosted-review/hosted-review.mjs authorize
 
   validate-source:
     needs: authorize
     permissions:
       contents: read
-    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@<FULL_FOUNDATION_COMMIT_SHA>
+    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@c38ae4e8e70a7307d6ff6a38cbd59797d94ac93c
     with:
       checkout_ref: ${{ needs.authorize.outputs.source_sha }}
       node_version_file: .node-version
@@ -66,91 +60,74 @@ jobs:
 
   publish:
     needs: [authorize, validate-source]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
-      REPOSITORY: ${{ github.repository }}
+      REVIEW_KIND: ${{ needs.authorize.outputs.kind }}
       PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
       SOURCE_SHA: ${{ needs.authorize.outputs.source_sha }}
-      PREVIEW_BRANCH: ${{ needs.authorize.outputs.preview_branch }}
+      COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
     steps:
       - name: Checkout trusted main automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-          fetch-depth: 1
           persist-credentials: true
-
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
+      - name: Publish content-identical synthetic child B
+        run: node kits/vercel/hosted-review/hosted-review.mjs publish
 
-      - name: Publish synthetic Preview source
-        id: publish
-        run: node scripts/on-demand-preview.mjs publish
-
-      - name: Reused current Preview source
-        if: ${{ steps.publish.outputs.reused == 'true' }}
-        run: echo 'Current PR HEAD already owns the synthetic Preview branch; no new Vercel deployment was requested.' >> "$GITHUB_STEP_SUMMARY"
-
-  notify-ready:
-    if: >-
-      ${{ github.event_name == 'repository_dispatch' &&
-          github.event.client_payload.environment == 'preview' &&
-          startsWith(github.event.client_payload.git.ref, 'preview/pr-') }}
+  notify:
+    if: ${{ github.event_name == 'repository_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read
       issues: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
     env:
       GH_TOKEN: ${{ github.token }}
-      REPOSITORY: ${{ github.repository }}
-      VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME }}
+      VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+      FIXED_STAGING_URL: ${{ vars.FIXED_STAGING_URL }}
     steps:
       - name: Checkout trusted main automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-          fetch-depth: 1
           persist-credentials: false
-
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
-
-      - name: Validate Vercel success and return Preview URL
-        run: node scripts/on-demand-preview.mjs notify
+      - name: Verify deployment with Vercel API before notifying
+        run: node kits/vercel/hosted-review/hosted-review.mjs notify
 
   cleanup:
     if: ${{ github.event_name == 'pull_request_target' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
-      pull-requests: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
     env:
       GH_TOKEN: ${{ github.token }}
-      REPOSITORY: ${{ github.repository }}
     steps:
       - name: Checkout trusted main automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-          fetch-depth: 1
           persist-credentials: true
-
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
-
-      - name: Release synthetic Preview branch
-        run: node scripts/on-demand-preview.mjs cleanup
+      - name: Cleanup only refs owned by the closed PR
+        run: node kits/vercel/hosted-review/hosted-review.mjs cleanup
