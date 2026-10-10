@@ -7,17 +7,15 @@ ChatGPTなどのAIを利用してWebアプリを開発するための、再利�
 Current Foundation version: **0.11.0 (pre-1.0)**.
 実際のアプリで契約を検証するまでは`0.x`を維持します。標準構成はReact + TypeScript + Vite + npmですが、Next.jsなどの選択を禁止するものではありません。
 
-## 主要な文書
+## 最初に読むもの
 
-| ファイル | 役割 |
-| --- | --- |
-| `PRODUCT.base.md` | アプリの`PRODUCT.md`の原型。機能・制約・非対象を定義 |
-| `DESIGN.base.md` | アプリの`DESIGN.md`の原型。UX・デザインを定義 |
-| `AGENTS.md` | AI開発に共通する最小限の規則 |
-| `docs/ai-implementation.md` | Chat + GitHub、Workを使った実装・引き継ぎの手順 |
-| `docs/adoption.md` | 新規アプリへのFoundation導入手順 |
+- [`AGENTS.md`](AGENTS.md)：AI・開発者の共通ルール（承認、品質、Work明示指示）。
+- [`docs/README.md`](docs/README.md)：**全文書とGitHub Actionsの一覧、用途別の読む順番**。
+- [`docs/adoption.md`](docs/adoption.md)：アプリへの導入・Foundation更新。
+- [`docs/ai-implementation.md`](docs/ai-implementation.md)：Chatからの実装・検証・ツール選択。
+- `PRODUCT.base.md` / `DESIGN.base.md`：採用先アプリで個別に具体化する仕様の原型。
 
-IssueとPRは判断・変更の記録です。製品の最新仕様はアプリ側の`PRODUCT.md`と`DESIGN.md`を正本とします。
+変更対象に関係する文書だけを読みます。IssueとPRは判断・変更の記録であり、アプリの最新仕様は採用先の`PRODUCT.md`と`DESIGN.md`が正本です。
 
 ## 開発の進め方
 
@@ -42,21 +40,6 @@ PRの`/preview`コメントから、対象HEADのCIを実施したうえで合�
 
 既定方式の詳細は`docs/vercel.md`、`docs/vercel-on-demand-preview.md`を参照してください。固定Stagingは`docs/vercel-fixed-staging.md`です。
 
-## 補足資料
+## 詳細な運用ガイド
 
-- `docs/application-releases.md`：必要時だけ導入するアプリのタグとGitHub Release。
-- `docs/azure-oidc.md`：GitHub ActionsからAzureへアクセスする場合のOIDCと権限境界。
-- `docs/ci-performance.md`：CIの速度とキャッシュ設計。
-- `docs/ui-implementation.md`、`docs/ui-review.md`：UI実装と画面レビュー。
-- `docs/independent-review.md`：Codexレビューを含む独立レビュー。
-- `docs/adoption.md`：導入・更新・プロバイダー側の動作確認。
-
-既存のアプリを新しい既定設定に合わせるためだけに改修しません。Foundationの改訂は採用先で影響を評価してから適用します。
-
-## Chatからの新規GitHubリポジトリ作成（任意の管理機能）
-
-Chatから個人所有の新規**非公開**リポジトリを作る際は、既存のFoundationリポジトリを操作起点として利用できます。**現時点では権限の初期設定がないため、作成の実行はまだできません。**
-
-初回だけ、GitHub公式のAPIで`POST /user/repos`が認可される**期限付き・最小権限のユーザートークン**（Fine-grained PATの「Repository creation: write」等）を用意し、FoundationのRepository secret `REPO_CREATION_TOKEN`へ設定します。**トークンをChat、Issue、PRに貼らないでください。** この設定にはGitHub上の本人操作が必要です。通常の`GITHUB_TOKEN`だけでは個人の新規リポジトリを作成できません。
-
-トークン設定後は、ChatがOwner本人の依頼に従ってFoundationにタイトル`repo-create: <safe-name>`のIssueを作成し、所有者の承認された正確な`/create-private-repo`コメントで実行します。実行ジョブは信頼済み`main`、GitHub Actions標準Tokenは読み取り専用。Issue作者・コメント作者・Tokenのユーザーを同一Ownerとして再検証し、既存repoがあれば作成せず失敗します。実行結果には作成した非公開repo URLだけを残します。公開repoの作成、任意のShell実行、既存repoの権限変更、リポジトリ削除は対象外です。
+UI、Vercel、Azure OIDC、CI、独立レビュー、バージョン管理、GitHubの管理操作は [`docs/README.md`](docs/README.md) から必要な項目だけ参照してください。既存アプリを新しいFoundationの既定値へ合わせるためだけに変更しません。

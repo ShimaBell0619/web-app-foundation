@@ -330,24 +330,6 @@ try {
     }
   }
 
-  {
-    const workflow = readFileSync('.github/workflows/publish-foundation.yml', 'utf8');
-    for (const marker of [
-      "github.event.issue.number == 93",
-      "github.event.comment.author_association == 'OWNER'",
-      "github.event.comment.body == '/publish-foundation-v0.11.0'",
-      "contents: write",
-      "actions: read",
-      "gh release create",
-      "git/matching-refs/tags/",
-      "select(.ref == $tag)",
-      "Foundation CI",
-    ]) {
-      if (!workflow.includes(marker)) throw new Error(`publish workflow missing release contract: ${marker}`);
-    }
-    if (workflow.includes("continue-on-error: true")) throw new Error("release workflow must fail closed");
-  }
-
   console.log(`Foundation validator regression tests passed across versions: ${versions.join(', ')}.`);
 } finally {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true });

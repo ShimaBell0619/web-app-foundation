@@ -78,6 +78,8 @@ A normal Foundation release is:
 
 Do not mutate an existing released tag to point at different code. The complete release procedure should be exercised before the next Foundation release is treated as proven.
 
+The v0.11.0-only publishing workflow (fixed Issue #93 and fixed `/publish-foundation-v0.11.0` command) has completed its release and was **removed from active `.github/workflows/`**. Its execution history and the published tag/Release remain the audit evidence. Do not reuse this release-specific workflow for a different version; implement an explicitly scoped, owner-approved publishing path for each future Foundation release (or introduce a separately reviewed generic release contract). The [documentation and workflow index](README.md) lists only currently active workflows.
+
 ## Downstream application release intent
 
 Application release publication must remain explicit. Do not infer that every merged feature PR should bump an application version or publish a release.
