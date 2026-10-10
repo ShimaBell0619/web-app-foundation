@@ -99,11 +99,36 @@ test('Staging occupant must have complete and unique Foundation ownership', () =
   const old = { sha: B, parent: A, tree, message: child.message };
   assert.equal(stagingOccupantRequestId(old, A, tree), 500);
   assert.equal(stagingOccupantRequestId({ sha: A }, A, null), 0);
+  const olderMain = { sha: 'd'.repeat(40), message: 'Ordinary previous main commit' };
+  assert.throws(() => stagingOccupantRequestId(olderMain, A, null),
+    /trusted Foundation provenance/);
+  assert.equal(stagingOccupantRequestId(olderMain, A, null, true), 0);
   assert.throws(() => stagingOccupantRequestId({ ...old, message: 'unknown legacy commit' }, A, tree));
   assert.throws(() => stagingOccupantRequestId({
     ...old, message: child.message + '\nFoundation-Staging-Request-ID: 501',
   }, A, tree));
   assert.throws(() => stagingOccupantRequestId({ ...old, tree: 'd'.repeat(40) }, A, tree));
+});
+
+test('main-ancestor baseline accepts only a GitHub-confirmed compare result', async () => {
+  const older = 'd'.repeat(40);
+  const current = A;
+  const cases = [
+    [{ status: 'ahead', behind_by: 0, merge_base_commit: { sha: older } }, true],
+    [{ status: 'diverged', behind_by: 1, merge_base_commit: { sha: B } }, false],
+    [{ status: 'behind', behind_by: 1, merge_base_commit: { sha: current } }, false],
+    [{ status: 'ahead', behind_by: 0, merge_base_commit: { sha: B } }, false],
+  ];
+  for (const [data, expected] of cases) {
+    const client = createGitHubClient({
+      token: 'test', repository: repo,
+      fetchFn: async url => {
+        assert.ok(url.endsWith('/compare/' + older + '...' + current + '?per_page=1'));
+        return response(data);
+      },
+    });
+    assert.equal(await client.mainAncestor(older, current), expected);
+  }
 });
 
 test('only newer, writer-authorized requests on open main-target same-repo PRs supersede Staging', async () => {
