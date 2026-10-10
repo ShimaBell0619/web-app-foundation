@@ -34,4 +34,4 @@ jobs:
       - name: Create only an owner-approved private repository
         env:
           REPO_CREATION_TOKEN: ${{ secrets.REPO_CREATION_TOKEN }}
-        run: node scripts/create-private-repo.mjs
+        run: node kits/github/repository-create/create-private-repo.mjs
