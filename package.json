@@ -8,7 +8,7 @@
   },
   "scripts": {
     "foundation:validate": "node scripts/validate.mjs && node scripts/validate-docs-inventory.mjs && node scripts/validate-release-state.mjs",
-    "foundation:test": "node tests/web-ci.test.mjs && node tests/release.test.mjs && node tests/preview.test.mjs && node tests/repository-create.test.mjs && node --test tests/staging.test.mjs tests/staging-context.test.mjs tests/repository.test.mjs tests/workflow-security.test.mjs",
+    "foundation:test": "node tests/web-ci.test.mjs && node tests/release.test.mjs && node tests/preview.test.mjs && node tests/repository-create.test.mjs && node --test tests/staging.test.mjs tests/staging-context.test.mjs tests/repository.test.mjs tests/workflow-security.test.mjs && node --test tests/vercel-provenance.test.mjs",
     "foundation:test:web-ci": "node tests/web-ci.test.mjs",
     "foundation:test:application-release": "node tests/release.test.mjs",
     "foundation:test:vercel-staging": "node --test tests/staging.test.mjs tests/staging-context.test.mjs",

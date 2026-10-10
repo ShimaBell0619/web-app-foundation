@@ -1,6 +1,7 @@
 import { appendFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { matchesSource, ownedBy } from '../shared/provenance.mjs';
 
 const API_VERSION = '2022-11-28';
 const MAIN_BRANCH = 'main';
@@ -83,21 +84,14 @@ export function buildStagingPushArgs(targetSha, expectedSha) {
   ];
 }
 
-function marker(message, key) {
-  const entries = String(message ?? '').split(/\r?\n/).filter(line => line.startsWith(key + ':'));
-  if (entries.length !== 1) return null;
-  const prefix = key + ': ';
-  if (!entries[0].startsWith(prefix)) return null;
-  const value = entries[0].slice(prefix.length);
-  return value && !/\s/.test(value) ? value : null;
-}
 export function sourceMarkers(message, prNumber, sourceSha) {
-  return marker(message, 'Foundation-Fixed-Staging-PR') === String(parsePrNumber(prNumber))
-    && marker(message, 'Source-PR-HEAD') === assertSha(sourceSha, 'source SHA');
+  return matchesSource(message, 'Fixed-Staging', parsePrNumber(prNumber), assertSha(sourceSha, 'source SHA'));
 }
+
 export function stagingOwnershipMatches(message, prNumber) {
-  return marker(message, 'Foundation-Fixed-Staging-PR') === String(parsePrNumber(prNumber));
+  return ownedBy(message, 'Fixed-Staging', parsePrNumber(prNumber));
 }
+
 function setOutput(name, value) {
   appendFileSync(requireValue(process.env.GITHUB_OUTPUT, 'GITHUB_OUTPUT'), `${name}=${value}\n`);
 }

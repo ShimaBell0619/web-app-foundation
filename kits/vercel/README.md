@@ -547,3 +547,7 @@ After the optional profile is on `main`:
 - GitHub Actions secure `pull_request_target`: https://docs.github.com/actions/reference/security/securely-using-pull_request_target
 - Git `--force-with-lease`: https://git-scm.com/docs/git-push
 - Vercel Git configuration: https://vercel.com/docs/project-configuration/git-configuration
+
+## Shared source provenance
+
+Both Preview and Fixed Staging use `kits/vercel/shared/provenance.mjs` to check **unique, full-line** commit ownership trailers. When adopting either kit, copy the `shared/` directory alongside the selected helper; copying only `on-demand-preview/` or `fixed-staging/` breaks the module import. The shared parser intentionally rejects PR #4 matching PR #42, duplicated trailers, mismatched source SHA, or malformed whitespace. The unprivileged source validation and privileged publisher remain separate; sharing this parser does not merge their trust boundaries.
