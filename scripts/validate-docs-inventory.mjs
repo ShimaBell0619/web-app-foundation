@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 function walk(dir, root) {
@@ -10,19 +10,18 @@ function walk(dir, root) {
   });
 }
 
-function listedPaths(markdown, prefix, extension) {
-  const regex = new RegExp(
-    `^\\|\\s*\\[?\\`(${prefix}\\/[^\\`]+\\.${extension})\\``,
-    'gm',
-  );
+function listedPaths(markdown, category) {
+  const regex = category === 'docs'
+    ? /^\|\s*\[?`(docs\/[^\`]+\.md)`/gm
+    : /^\|\s*\[?`(\.github\/workflows\/[^\`]+\.ya?ml)`/gm;
   return [...markdown.matchAll(regex)].map(match => match[1]);
 }
 
 export function checkInventory({ docs, workflows, guide }) {
   const errors = [];
   const categories = [
-    { label: 'document', expected: docs, actual: listedPaths(guide, 'docs', 'md') },
-    { label: 'workflow', expected: workflows, actual: listedPaths(guide, '\\.github\\/workflows', 'ya?ml') },
+    { label: 'document', expected: docs, actual: listedPaths(guide, 'docs') },
+    { label: 'workflow', expected: workflows, actual: listedPaths(guide, 'workflows') },
   ];
 
   for (const { label, expected, actual } of categories) {
@@ -42,7 +41,7 @@ export function checkInventory({ docs, workflows, guide }) {
 export function validate(root = '.') {
   const guide = readFileSync(join(root, 'docs/README.md'), 'utf8');
   const docs = walk('docs', root).filter(x => x.endsWith('.md') && x !== 'docs/README.md');
-  const workflows = walk('.github/workflows', root).filter(x => /\\.ya?ml$/.test(x));
+  const workflows = walk('.github/workflows', root).filter(x => /\.ya?ml$/.test(x));
   const errors = checkInventory({ docs, workflows, guide });
   const agents = readFileSync(join(root, 'AGENTS.md'), 'utf8');
   const readme = readFileSync(join(root, 'README.md'), 'utf8');
