@@ -5,6 +5,22 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkInventory, validate } from '../scripts/validate-docs-inventory.mjs';
+import { validateLinks } from '../scripts/validate-links.mjs';
+
+test('relative links, reference links and heading fragments fail when broken', () => {
+  const root = mkdtempSync(join(tmpdir(), 'foundation-links-'));
+  try {
+    writeFileSync(join(root, 'target.md'), '# 日本語の見出し\n');
+    writeFileSync(join(root, 'README.md'), '[本文](target.md#日本語の見出し)\n[参照][guide]\n[guide]: target.md\n');
+    assert.deepEqual(validateLinks(root, ['README.md']), []);
+    writeFileSync(join(root, 'README.md'), '[欠落](missing.md)\n[誤見出し](target.md#missing)\n[未定義][guide]\n');
+    const errors = validateLinks(root, ['README.md']);
+    assert.equal(errors.length, 3);
+    assert.match(errors.join('\n'), /broken link/);
+    assert.match(errors.join('\n'), /broken fragment/);
+    assert.match(errors.join('\n'), /undefined link/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test('the documentation and workflow catalog matches the repository', () => {
   assert.deepEqual(validate(), []);

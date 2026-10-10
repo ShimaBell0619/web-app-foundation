@@ -1,31 +1,29 @@
-# GitHub Release kit (optional)
+# GitHub Release Kit（任意）
 
-Use this kit only for an application whose owner explicitly requests a versioned GitHub Release. Foundation itself uses Changesets ([maintaining](../../../docs/maintaining.md)); ordinary PR merges do **not** imply a release.
+Ownerが版付きGitHub Releaseを明示的に依頼したアプリだけに使います。Foundation自身は [Changesets](../../../docs/maintaining.md) を使います。通常のPRマージからreleaseを推測しません。
 
-## Install and trust assumptions
+## 導入と信頼条件
 
-Copy [workflow.yml](workflow.yml) to an app's `.github/workflows/release.yml` and adjust the trusted CI workflow name (default: `CI`). Protect the app's `main` branch (reviews + successful CI) before enabling publication. Unprotected main allows unreviewed code or workflow changes to be treated as trusted.
+[workflow.yml](workflow.yml) をアプリの `.github/workflows/release.yml` へコピーし、信頼済みCI名（既定 `CI`）を設定します。公開前にmainをレビューとCIで保護します。未保護mainでは未レビューのコード／Workflowが信頼済みと扱われます。この任意の特権Kitの条件であり、全アプリの必須条件ではありません。
 
-- Root workflow permissions are read-only; the release job alone receives `contents: write`.
-- Only a successful `push` CI run on the same repo's `main` may trigger publication. Untrusted PR runs cannot publish.
-- Checkout uses that successful run's **exact source SHA** without persisted checkout credentials. The workflow verifies `main` still points to that SHA immediately before preflight and publication. A newer main commit means this release attempt must stop, not silently move to the newer SHA.
-- Publication is serialized by repository. Existing `vX.Y.Z` tags are never moved, and both lightweight and annotated tags resolve to the underlying commit before comparing with the validated SHA.
-- The GitHub Release must be published (not a draft), its prerelease metadata must match the chosen `PRERELEASE` setting, and its tag must resolve to the successful CI SHA. An exact already-published match is idempotent; mismatched or partially completed states fail closed.
-- Do not execute PR checkout code, attach untrusted artifacts, or restore privileged caches in the release job.
+- root権限はread-only、release jobだけが `contents: write` を持ちます。
+- 同じrepoのmainへのpush CI成功だけが公開を起動します。未信頼PRから公開しません。
+- 成功runの正確なsource SHAを資格情報を残さずcheckoutし、preflight・公開直前にmainとの一致を検査します。mainが進んだら中止し、新SHAへ黙って移りません。
+- repo単位で直列化し、既存 `vX.Y.Z` を移動しません。lightweight／annotated tagとも実commitを解決してCI SHAと比較します。
+- Releaseはdraftでなくpublishedで、prereleaseは `PRERELEASE` と一致し、tagはCI SHAを指す必要があります。完全一致の再実行は冪等、相違・部分完了は失敗します。
+- 公開jobではPRのコード、未信頼Artifact、特権cacheを実行・復元しません。
 
-## Explicit release workflow
+## 明示的なrelease
 
-1. Approve the milestone and version, then update the app's `package.json` to the chosen `X.Y.Z`.
-2. Run app quality gates and merge through the protected branch.
-3. Successful `main` CI with a version change relative to the checked-out commit's first parent causes the release job to publish `vX.Y.Z` with generated notes.
-4. Verify GitHub tag, published Release and metadata; for deployed apps, separately confirm Production deployment and actual application behavior.
+1. milestoneと版を承認し、アプリのpackage.jsonを `X.Y.Z` に更新します。
+2. 品質ゲートを通し、保護されたmainへマージします。
+3. main CI成功時、checkout commitの第一親から版が変わっていれば、生成notesでtagとReleaseを公開します。
+4. tag、published Release、metadataを確認します。配備アプリはProductionと実動作も別に確認します。
 
-A tag is not a Release; a GitHub Release is not a Vercel deployment; CI success does not prove that users can reach or use the UI.
+tag、GitHub Release、Vercel配備、CI、実UIは別の証拠です。第一親による版比較と単純な `X.Y.Z` を前提にします。merge commit、独立release branch、SemVer suffix、別version正本へ適応する場合はレビュー・検証します。
 
-The template assumes a first-parent version comparison and a simple stable `X.Y.Z` app version. Adapt when a project uses merge commits, independent release branches, SemVer prerelease suffixes, or custom version sources—review and test the change instead of silently accepting a skip.
+## 失敗時
 
-## Unavailable / failure behavior
+tag競合、draft、誤owner／branch、正確なCI成功の欠如、API障害、進んだmain、prerelease不整合は失敗です。暗黙の再試行やforce更新を許可しません。結果不明のAPI書き込みを再試行する前にtagとReleaseを照会し、未実行と部分成功を区別します。
 
-Conflicting tag, draft Release, incorrect owner/branch, missing successful exact CI, GitHub API error, an advanced main ref, or inconsistent prerelease state are errors; they do not grant implicit retries or force updates. Before retrying an uncertain API write, **query the tag and Release** to distinguish no-op from partial success.
-
-This kit does not install credentials, alter branch protection, or run itself in Foundation. It is copied only when the application needs a release workflow.
+このKitは資格情報やブランチ保護を設定せず、Foundation自身でも実行しません。

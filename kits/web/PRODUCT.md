@@ -1,66 +1,36 @@
-# Product Contract
+# 製品契約
 
-Status: template baseline.
+状態：テンプレート。生成だけでは製品仕様の承認を意味しません。
 
-Copy this file to `PRODUCT.md` when creating an application. Replace instructional text with the application's actual contract. Keep it concise enough that an AI agent can reliably read it before implementation.
+アプリの `PRODUCT.md` として使用し、案内文を実際の製品契約に置き換えてください。実装前に読める長さを保ちます。UI・UXは `DESIGN.md`、開発規則は `AGENTS.md`、詳細な技術構成は必要な場合に実在する専門文書へ記載します。
 
-`PRODUCT.md` answers **what the product is, what it must do, and what it deliberately does not do**. UI visual rules belong in `DESIGN.md`; implementation architecture belongs in `docs/ARCHITECTURE.md` when that detail is substantial.
+## 1. 目的
 
-## 1. Purpose
+解決する問題と、利用者が得る主な成果を定義します。
 
-Describe the problem the product exists to solve and the primary outcome it should create.
+## 2. 利用者と主要な作業
 
-## 2. Users and primary jobs
+対象利用者と具体的な作業を記載します。抽象的な人物像だけにしません。
 
-Define the intended users and their most important jobs-to-be-done. Prefer concrete tasks over broad personas.
+## 3. 必須の振る舞い
 
-## 3. Core behaviors
+実装を変えても維持する操作、データ所有・保存、ネットワーク／オフライン、認証・認可、入出力、互換性、利用者に見える失敗時の動作を必要な範囲で定義します。
 
-List behavior that must remain true across implementations.
+## 4. 制約
 
-Examples:
+プライバシー・データ所在、対応ブラウザ、ローカル／クラウド動作、法務・ライセンス、性能・アクセシビリティなど、製品の約束に関わる制約を記載します。詳細な実装方法は専門文書を参照し、恒常的な製品ルールをここに残します。
 
-- supported user flows,
-- persistence/data ownership expectations,
-- offline/network expectations,
-- authentication/authorization behavior,
-- import/export behavior,
-- compatibility promises,
-- user-visible failure behavior.
+## 5. 非対象
 
-## 4. Product constraints
+隣接する機能でも、今回の製品に含めないものを明示します。無関係な作業で製品を拡張しないための境界です。
 
-Record constraints that materially affect product behavior or implementation choices.
+## 6. 受け入れ条件
 
-Examples:
+対応済みと判断するために必要な証拠を定義します。ブラウザ・端末、代表データ量、アクセシビリティ、セキュリティレビュー、移行・更新の確認から必要な条件を選びます。実装・CI・配備・実画面の証拠は区別します。
 
-- privacy/data-residency boundaries,
-- supported environments or browsers,
-- local-only or cloud-connected operation,
-- legal/licensing constraints,
-- performance or accessibility commitments that are part of the product promise.
+## 7. 変更の規則
 
-If a constraint needs detailed implementation guidance, keep the durable product rule here and link to the relevant detailed document.
-
-## 5. Non-goals
-
-Explicitly list adjacent capabilities that are intentionally out of scope. Non-goals prevent agents from expanding the product during unrelated implementation work.
-
-## 6. Acceptance boundaries
-
-Define the evidence required before a feature or product capability may be called supported.
-
-Examples:
-
-- required browser/device validation,
-- representative data-size validation,
-- accessibility checks,
-- security review,
-- migration/update verification.
-
-## 7. Evolution rules
-
-- Do not silently change this contract while implementing a feature.
-- If implementation pressure conflicts with `PRODUCT.md`, raise the conflict and obtain an explicit product decision.
-- Update this file when the approved product behavior changes.
-- Keep decision history in Issues/PRs; keep the currently approved behavior here.
+- 実装中にこの契約を黙って変更しません。
+- 実装上の都合と契約が衝突した場合は、明示的な製品判断を得ます。
+- 承認済みの動作が変わったときに更新します。
+- 判断の履歴はIssue／PR、現在の承認済み動作はこの文書に残します。

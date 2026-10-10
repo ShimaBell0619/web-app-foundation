@@ -1,16 +1,5 @@
-# E2E templates
+# Webアプリ用Kit
 
-Files in this directory are copyable consumer examples, not Foundation runtime tests or dependencies.
+[PRODUCT.md](PRODUCT.md) は製品の動作、[DESIGN.md](DESIGN.md) はUI・UXの契約テンプレートです。製品固有の内容に置き換えてから実装します。
 
-`rendered-ui-review.spec.mjs` demonstrates inexpensive rendered-UI checks for the default review baseline:
-
-- desktop around 1440px,
-- mobile around 390px,
-- narrow stress width around 320px,
-- horizontal overflow,
-- keyboard focus reachability,
-- an optional text-status convention.
-
-Consumers should adapt paths, selectors, and assertions to their own `PRODUCT.md` / `DESIGN.md`. Do not add `data-review-status` or other testing hooks blindly when a more semantic product-specific assertion exists.
-
-Visible focus styling is intentionally not prescribed by the template. A consumer may use outline, shadow, border, background, or another accessible treatment; validate the approved treatment in the consumer where automation is worthwhile.
+描画確認は [UI手順](../../docs/ui.md)、導入は [adoption.md](../../docs/adoption.md) を参照してください。アプリ固有のselectorと操作シナリオは採用先が所有します。
