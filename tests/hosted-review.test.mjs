@@ -101,7 +101,7 @@ test('Staging occupant must have complete and unique Foundation ownership', () =
   assert.equal(stagingOccupantRequestId({ sha: A }, A, null), 0);
   assert.throws(() => stagingOccupantRequestId({ ...old, message: 'unknown legacy commit' }, A, tree));
   assert.throws(() => stagingOccupantRequestId({
-    ...old, message: child.message + '\\nFoundation-Staging-Request-ID: 501',
+    ...old, message: child.message + '\nFoundation-Staging-Request-ID: 501',
   }, A, tree));
   assert.throws(() => stagingOccupantRequestId({ ...old, tree: 'd'.repeat(40) }, A, tree));
 });
