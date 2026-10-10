@@ -12,7 +12,8 @@
 
 機能ごとの導入は[ Vercel ](../kits/vercel/README.md)、[ Repo作成 ](../kits/github/repository-create/README.md)、[ GitHub Release ](../kits/github/release/README.md)のREADMEを参照します。未導入のkitを稼働済みと報告しません。
 
-| Foundationで常時有効なWorkflow | 役割 |
+| FoundationのWorkflow（公開用は一時的） | 役割 |
 | --- | --- |
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | Foundation PR/mainの品質検証 |
 | [`.github/workflows/web-ci.yml`](../.github/workflows/web-ci.yml) | 読み取り専用の再利用Web品質CI |
+| [`.github/workflows/publish-foundation-v012.yml`](../.github/workflows/publish-foundation-v012.yml) | v0.12.0限定のOwner起動公開処理。公開後に削除 |
