@@ -190,18 +190,20 @@ async function validateCurrentRequest(client, number, comment, kind) {
   await writer(client, required(actual?.user?.login, 'comment author'));
 }
 export async function newerStagingRequest(client, currentId, createdAt) {
-  // Repository-wide comments are returned oldest-first. Scan bounded pages;
-  // exhaustion fails closed rather than allowing an older request to overwrite a newer one.
+  // This audit is bounded and fails closed if it cannot inspect all newer requests.
+  const prefix = 'https://api.github.com/repos/' + client.repo + '/issues/';
   for (let page = 1; page <= 20; page++) {
     const items = await client.comments(page, createdAt);
     if (!Array.isArray(items)) throw new Error('invalid GitHub comments response');
     for (const candidate of items) {
       if (candidate?.body !== '/staging' || Number(candidate.id) <= currentId) continue;
-      // A comment on an Issue, fork PR, closed PR or non-main PR is not a valid request.
-      // Re-query the PR because the list-comments payload is not an authorization source.
-      const match = new RegExp('^https://api\\.github\\.com/repos/' +
-        client.repo.replace(/[.*+?^${}()|[\\]\\]/g, '\\      const p = await client.permission(candidate.user?.login ?? '');
-      if (['write', 'maintain', 'admin'].includes(p?.permission)) return true;') + '/issues/([1-9][0-9]*)
+      if (typeof candidate.issue_url !== 'string' || !candidate.issue_url.startsWith(prefix)) continue;
+      const numberText = candidate.issue_url.slice(prefix.length);
+      if (!/^[1-9][0-9]*$/.test(numberText)) continue;
+      const pr = await client.pr(prNumber(numberText));
+      if (!sameRepoPr(pr, client.repo)) continue;
+      const permission = await client.permission(candidate.user?.login ?? '');
+      if (['write', 'maintain', 'admin'].includes(permission?.permission)) return true;
     }
     if (items.length < 100) return false;
   }
