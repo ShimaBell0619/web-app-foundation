@@ -84,7 +84,7 @@ export function createGitHubClient({ token, repository, fetchFn = fetch, apiUrl 
   }
   return {
     repo,
-    pr: n => get('/pulls/' + prNumber(n)),
+    pr: (n, missing = false) => get('/pulls/' + prNumber(n), { missing }),
     permission: user => get('/collaborators/' + encodeURIComponent(user) + '/permission'),
     comment: id => get('/issues/comments/' + commentId(id)),
     comments: (page, since) => get('/issues/comments?per_page=100&page=' + page + (since ? '&since=' + encodeURIComponent(since) : '')),
@@ -200,7 +200,7 @@ export async function newerStagingRequest(client, currentId, createdAt) {
       if (typeof candidate.issue_url !== 'string' || !candidate.issue_url.startsWith(prefix)) continue;
       const numberText = candidate.issue_url.slice(prefix.length);
       if (!/^[1-9][0-9]*$/.test(numberText)) continue;
-      const pr = await client.pr(prNumber(numberText));
+      const pr = await client.pr(prNumber(numberText), true);
       if (!sameRepoPr(pr, client.repo)) continue;
       const permission = await client.permission(candidate.user?.login ?? '');
       if (['write', 'maintain', 'admin'].includes(permission?.permission)) return true;
