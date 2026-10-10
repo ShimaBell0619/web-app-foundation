@@ -84,7 +84,7 @@ export function createGitHubClient({ token, repository, fetchFn = fetch, apiUrl 
   }
   return {
     repo,
-    pr: n => get('/pulls/' + prNumber(n)),
+    pr: (n, missing = false) => get('/pulls/' + prNumber(n), { missing }),
     permission: user => get('/collaborators/' + encodeURIComponent(user) + '/permission'),
     comment: id => get('/issues/comments/' + commentId(id)),
     comments: (page, since) => get('/issues/comments?per_page=100&page=' + page + (since ? '&since=' + encodeURIComponent(since) : '')),
@@ -197,6 +197,12 @@ export async function newerStagingRequest(client, currentId, createdAt) {
     if (!Array.isArray(items)) throw new Error('invalid GitHub comments response');
     for (const candidate of items) {
       if (candidate?.body !== '/staging' || Number(candidate.id) <= currentId) continue;
+      const prefix = 'https://api.github.com/repos/' + client.repo + '/issues/';
+      if (typeof candidate.issue_url !== 'string' || !candidate.issue_url.startsWith(prefix)) continue;
+      const issueNumber = candidate.issue_url.slice(prefix.length);
+      if (!/^[1-9][0-9]*$/.test(issueNumber)) continue;
+      const requestPr = await client.pr(prNumber(issueNumber), true);
+      if (!sameRepoPr(requestPr, client.repo)) continue;
       const p = await client.permission(candidate.user?.login ?? '');
       if (['write', 'maintain', 'admin'].includes(p?.permission)) return true;
     }
