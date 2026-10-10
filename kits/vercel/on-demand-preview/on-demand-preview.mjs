@@ -1,5 +1,6 @@
 import { appendFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { matchesSource, ownedBy } from '../shared/provenance.mjs';
 
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
 const repository = process.env.REPOSITORY || process.env.GITHUB_REPOSITORY || '';
@@ -65,10 +66,7 @@ function sameRepositoryPr(pr, repo) {
 }
 
 function sourceMarkers(message, prNumber, sourceSha) {
-  return (
-    String(message ?? '').includes(`Foundation-Preview-PR: ${prNumber}`) &&
-    String(message ?? '').includes(`Source-PR-HEAD: ${sourceSha}`)
-  );
+  return matchesSource(message, 'Preview', prNumber, sourceSha);
 }
 
 async function authorize() {
@@ -259,7 +257,7 @@ async function cleanup() {
 
   git(['fetch', '--no-tags', 'origin', observed]);
   const message = git(['show', '-s', '--format=%B', observed]);
-  if (!String(message).includes(`Foundation-Preview-PR: ${prNumber}`)) {
+  if (!ownedBy(message, 'Preview', prNumber)) {
     throw new Error('refusing to delete a Preview branch without matching ownership marker');
   }
 
