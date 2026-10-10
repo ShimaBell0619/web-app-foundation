@@ -12,20 +12,25 @@ jobs:
     if: >-
       ${{ github.event.comment.body == '/create-private-repo' &&
           github.event.comment.author_association == 'OWNER' &&
+          github.event.comment.user.login == github.repository_owner &&
+          github.event.issue.user.login == github.repository_owner &&
+          github.event.issue.state == 'open' &&
           !github.event.issue.pull_request &&
           startsWith(github.event.issue.title, 'repo-create: ') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: repository-creation
     permissions:
       contents: read
+      issues: read
     concurrency:
-      group: repo-creation-issue-${{ github.event.issue.number }}
+      group: private-repository-creation
       cancel-in-progress: false
     steps:
-      - name: Checkout trusted Foundation main
+      - name: Checkout trusted management main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -34,4 +39,5 @@ jobs:
       - name: Create only an owner-approved private repository
         env:
           REPO_CREATION_TOKEN: ${{ secrets.REPO_CREATION_TOKEN }}
-        run: node kits/github/repository-create/create-private-repo.mjs
+          REQUEST_READ_TOKEN: ${{ github.token }}
+        run: node scripts/create-private-repo.mjs

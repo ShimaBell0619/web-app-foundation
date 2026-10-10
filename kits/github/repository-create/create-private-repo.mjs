@@ -17,6 +17,11 @@ export function validateRepositoryRequest(event) {
     event?.issue?.state !== "open" ||
     owner?.type !== "User" ||
     !owner?.login ||
+    !Number.isSafeInteger(owner?.id) || owner.id <= 0 ||
+    event?.issue?.user?.id !== owner.id ||
+    event?.comment?.user?.id !== owner.id ||
+    !Number.isSafeInteger(event?.issue?.number) || event.issue.number <= 0 ||
+    !Number.isSafeInteger(event?.comment?.id) || event.comment.id <= 0 ||
     !commenter ||
     !author ||
     commenter.toLowerCase() !== owner.login.toLowerCase() ||
@@ -36,26 +41,47 @@ export function validateRepositoryRequest(event) {
 }
 
 async function github(path, { method = "GET", body, token, fetchImpl = fetch } = {}) {
-  const response = await fetchImpl(`https://api.github.com${path}`, {
-    method,
-    headers: {
-      accept: "application/vnd.github+json",
-      authorization: `Bearer ${token}`,
-      "x-github-api-version": "2022-11-28",
-      "user-agent": "foundation-chat-repo-creator",
-      ...(body ? { "content-type": "application/json" } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  let response;
+  try {
+    response = await fetchImpl(`https://api.github.com${path}`, {
+      method,
+      redirect: "error",
+      signal: AbortSignal.timeout(20_000),
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2026-03-10",
+        "user-agent": "foundation-chat-repo-creator",
+        ...(body ? { "content-type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch {
+    // Never echo fetch exceptions: they can include request credentials.
+    throw new Error("GitHub request failed; check GitHub state before any retry");
+  }
   return { status: response.status, data: await response.json().catch(() => ({})) };
 }
 
-export async function createPrivateRepo(event, { token, fetchImpl = fetch } = {}) {
+export async function createPrivateRepo(event, { token, requestToken, fetchImpl = fetch } = {}) {
   const { owner, name } = validateRepositoryRequest(event);
   if (!token) throw new Error("Missing REPO_CREATION_TOKEN; owner must configure the GitHub Actions secret");
+  if (!requestToken) throw new Error("Missing REQUEST_READ_TOKEN for current issue/comment verification");
+
+  const repoPath = `/repos/${event.repository.full_name}`;
+  const issue = await github(`${repoPath}/issues/${event.issue.number}`, { token: requestToken, fetchImpl });
+  const comment = await github(`${repoPath}/issues/comments/${event.comment.id}`, { token: requestToken, fetchImpl });
+  if (issue.status !== 200 || comment.status !== 200 ||
+      issue.data?.number !== event.issue.number || comment.data?.id !== event.comment.id ||
+      comment.data?.issue_url !== `https://api.github.com${repoPath}/issues/${event.issue.number}` ||
+      issue.data?.title !== event.issue.title || comment.data?.body !== event.comment.body) {
+    throw new Error("Owner request changed or cannot be verified; no repository created");
+  }
+  validateRepositoryRequest({ ...event, issue: issue.data, comment: comment.data });
 
   const identity = await github("/user", { token, fetchImpl });
-  if (identity.status !== 200 || identity.data?.login?.toLowerCase() !== owner.toLowerCase()) {
+  if (identity.status !== 200 || identity.data?.id !== event.repository.owner.id ||
+      identity.data?.login?.toLowerCase() !== owner.toLowerCase()) {
     throw new Error("Repository creation token is not a user token for the repository owner");
   }
 
@@ -81,33 +107,48 @@ export async function createPrivateRepo(event, { token, fetchImpl = fetch } = {}
     throw new Error(`GitHub repository creation failed (HTTP ${created.status}); no retry without checking GitHub state`);
   }
   if (
+    !Number.isSafeInteger(created.data?.id) || created.data.id <= 0 ||
     created.data?.owner?.login?.toLowerCase() !== owner.toLowerCase() ||
+    created.data?.owner?.id !== event.repository.owner.id ||
     created.data?.name !== name ||
     created.data?.private !== true ||
     created.data?.html_url !== `https://github.com/${owner}/${name}`
   ) {
     throw new Error("GitHub returned an unexpected creation response; check the new repository before further action");
   }
-  return { url: created.data.html_url, name, owner };
+  const verified = await github(`/repos/${owner}/${name}`, { token, fetchImpl });
+  if (verified.status !== 200 || verified.data?.id !== created.data?.id ||
+      verified.data?.owner?.id !== event.repository.owner.id ||
+      verified.data?.owner?.login?.toLowerCase() !== owner.toLowerCase() ||
+      verified.data?.name !== name || verified.data?.private !== true ||
+      verified.data?.html_url !== `https://github.com/${owner}/${name}` ||
+      typeof verified.data?.default_branch !== "string" || !verified.data.default_branch) {
+    throw new Error("Created repository post-verification failed; inspect GitHub state, do not retry creation");
+  }
+  return { url: verified.data.html_url, name, owner, defaultBranch: verified.data.default_branch };
 }
 
 export async function main() {
   const path = process.env.GITHUB_EVENT_PATH;
-  if (!path || !process.env.GITHUB_REPOSITORY) {
+  if (!path || !process.env.GITHUB_REPOSITORY ||
+      process.env.GITHUB_EVENT_NAME !== "issue_comment" ||
+      process.env.GITHUB_REF !== "refs/heads/main") {
     throw new Error("Missing trusted GitHub Actions event context");
   }
   const event = JSON.parse(readFileSync(path, "utf8"));
-  if (event.repository?.full_name !== process.env.GITHUB_REPOSITORY) {
+  if (event.repository?.full_name !== process.env.GITHUB_REPOSITORY ||
+      event.repository?.default_branch !== "main") {
     throw new Error("Event repository mismatch");
   }
 
   const result = await createPrivateRepo(event, {
     token: process.env.REPO_CREATION_TOKEN,
+    requestToken: process.env.REQUEST_READ_TOKEN,
   });
-  console.log(`Created private repository: ${result.url}`);
+  console.log(`Verified private repository: ${result.url}; default branch: ${result.defaultBranch}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFileSync } = await import("node:fs");
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Chat-created private repository\n${result.url}\n`);
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Chat-created private repository\n${result.url}\nOwner: ${result.owner}; private: true; default branch: ${result.defaultBranch}\n`);
   }
 }
 
