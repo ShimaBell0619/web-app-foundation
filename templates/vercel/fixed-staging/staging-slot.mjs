@@ -83,15 +83,112 @@ export function buildStagingPushArgs(targetSha, expectedSha) {
   ];
 }
 
+function readSingleCommitTrailer(message, name) {
+  const lines = String(message ?? '').split(/\r?\n/);
+  const exactPrefix = `${name}:`;
+  const entries = lines.filter((line) => line.startsWith(exactPrefix));
+  if (entries.length !== 1) return null;
+  const match = new RegExp(`^${name}: ([^\\s]+)import { appendFileSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+
+const API_VERSION = '2022-11-28';
+const MAIN_BRANCH = 'main';
+const STAGING_BRANCH = 'staging';
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+function requireValue(value, name) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) throw new Error(`${name} is required.`);
+  return normalized;
+}
+
+export function parsePrNumber(value) {
+  const normalized = requireValue(value, 'PR number');
+  if (!/^[1-9][0-9]*$/.test(normalized)) throw new Error(`Invalid PR number: ${normalized}`);
+  return Number(normalized);
+}
+
+export function assertSha(value, name = 'SHA') {
+  const normalized = requireValue(value, name).toLowerCase();
+  if (!SHA_PATTERN.test(normalized)) throw new Error(`Invalid ${name}: ${normalized}`);
+  return normalized;
+}
+
+export function parseStagingRequest(text, { requestRunId, repository }) {
+  let payload;
+  try {
+    payload = JSON.parse(requireValue(text, 'Staging request'));
+  } catch (error) {
+    throw new Error(`Invalid Staging request JSON: ${error instanceof Error ? error.message : error}`);
+  }
+
+  const prNumber = parsePrNumber(payload?.prNumber);
+  const expectedRunId = requireValue(requestRunId, 'STAGING_REQUEST_RUN_ID');
+  if (String(payload?.requestRunId ?? '') !== expectedRunId) {
+    throw new Error('Staging request run ID does not match the triggering workflow run.');
+  }
+  if (payload?.repository !== repository) {
+    throw new Error('Staging request repository does not match GITHUB_REPOSITORY.');
+  }
+  if (payload?.ref !== 'refs/heads/main') {
+    throw new Error('Staging request must originate from main.');
+  }
+  return prNumber;
+}
+
+export function validateDeployablePullRequest(pullRequest, repository) {
+  if (pullRequest?.state !== 'open') throw new Error('The requested PR is not open.');
+  if (pullRequest?.base?.repo?.full_name !== repository || pullRequest?.base?.ref !== MAIN_BRANCH) {
+    throw new Error('The requested PR must target main in this repository.');
+  }
+  if (pullRequest?.head?.repo?.full_name !== repository) {
+    throw new Error('Fork PRs cannot be deployed to the privileged fixed Staging slot.');
+  }
+  return assertSha(pullRequest?.head?.sha, 'PR HEAD SHA');
+}
+
+export function newerManualRunExists(currentRunId, workflowRuns) {
+  const current = BigInt(requireValue(currentRunId, 'request run ID'));
+  return workflowRuns.some((run) => {
+    if (run?.event !== 'workflow_dispatch' || run?.head_branch !== MAIN_BRANCH || run?.id == null) {
+      return false;
+    }
+    try {
+      return BigInt(String(run.id)) > current;
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function buildStagingPushArgs(targetSha, expectedSha) {
+  const target = assertSha(targetSha, 'target SHA');
+  const expected = assertSha(expectedSha, 'expected Staging SHA');
+  return [
+    'push',
+    'origin',
+    `${target}:refs/heads/${STAGING_BRANCH}`,
+    `--force-with-lease=refs/heads/${STAGING_BRANCH}:${expected}`,
+  ];
+}
+
+).exec(entries[0]);
+  return match ? match[1] : null;
+}
+
 export function sourceMarkers(message, prNumber, sourceSha) {
+  const actualNumber = readSingleCommitTrailer(message, 'Foundation-Fixed-Staging-PR');
+  const actualSha = readSingleCommitTrailer(message, 'Source-PR-HEAD');
   return (
-    String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${prNumber}`) &&
-    String(message ?? '').includes(`Source-PR-HEAD: ${sourceSha}`)
+    actualNumber !== null &&
+    actualNumber === String(parsePrNumber(prNumber)) &&
+    actualSha === assertSha(sourceSha, 'source SHA')
   );
 }
 
 export function stagingOwnershipMatches(message, prNumber) {
-  return String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${parsePrNumber(prNumber)}`);
+  return readSingleCommitTrailer(message, 'Foundation-Fixed-Staging-PR') === String(parsePrNumber(prNumber));
 }
 
 function setOutput(name, value) {
