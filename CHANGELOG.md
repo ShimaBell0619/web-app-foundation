@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.1
+
+### Patch Changes
+
+- 4eecd30: Fix Vercel authenticated deployment project identity verification to accept both `project.id` and `projectId`, while rejecting conflicting or mismatched project IDs. This avoids falsely rejecting valid READY notifications.
+
 ## 0.12.0
 
 ### Minor Changes

@@ -1,0 +1,85 @@
+name: Publish Foundation v0.12.1 (one-shot)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: >-
+      ${{ github.event.issue.number == 98 &&
+          !github.event.issue.pull_request &&
+          github.event.comment.author_association == 'OWNER' &&
+          github.event.comment.body == '/publish-foundation-v0.12.1' }}
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_VERSION: 0.12.1
+      RELEASE_TAG: v0.12.1
+    steps:
+      - name: Checkout trusted main at triggering SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify release target and successful main CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(node -p 'require("./package.json").version')" == "$EXPECTED_VERSION" ]]
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          [[ "$main_sha" == "$GITHUB_SHA" ]] || {
+            echo "::error::main moved since this release was requested."
+            exit 1
+          }
+          ci_success="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100" --jq '
+            [.workflow_runs[] | select(.name=="Foundation CI" and .event=="push" and .head_branch=="main" and .conclusion=="success")] | length')"
+          [[ "$ci_success" =~ ^[0-9]+$ && "$ci_success" -ge 1 ]] || {
+            echo "::error::Required Foundation CI has not passed for exact main SHA."
+            exit 1
+          }
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Release already exists and must not be overwritten."
+            exit 1
+          fi
+      - name: Validate Changesets release state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run foundation:validate
+          npm run foundation:release-validate
+      - name: Publish immutable tag and GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Matching-refs returns [] for absence; filter exact name rather than treating 404 JSON as a SHA.
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$RELEASE_TAG" > "$RUNNER_TEMP/foundation-tags.json"
+          current="$(jq -r --arg tag "refs/tags/$RELEASE_TAG" '[.[] | select(.ref == $tag) | .object.sha][0] // empty' "$RUNNER_TEMP/foundation-tags.json")"
+          if [[ -n "$current" && "$current" != "$GITHUB_SHA" ]]; then
+            echo "::error::A conflicting release tag exists. Refusing to move it."
+            exit 1
+          fi
+          if [[ -z "$current" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+              --method POST -f ref="refs/tags/$RELEASE_TAG" -f sha="$GITHUB_SHA" >/dev/null
+          fi
+          sed -n "/^## $EXPECTED_VERSION\$/,/^## [0-9]/p" CHANGELOG.md | sed '$d' > /tmp/foundation-release-notes.md
+          [[ -s /tmp/foundation-release-notes.md ]]
+          gh release create "$RELEASE_TAG" \
+            --verify-tag --title "Web App Foundation $RELEASE_TAG" \
+            --notes-file /tmp/foundation-release-notes.md
+          echo "Release published for validated main SHA $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
