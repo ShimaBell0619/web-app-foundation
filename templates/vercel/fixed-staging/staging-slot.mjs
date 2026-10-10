@@ -83,17 +83,21 @@ export function buildStagingPushArgs(targetSha, expectedSha) {
   ];
 }
 
+function marker(message, key) {
+  const entries = String(message ?? '').split(/\r?\n/).filter(line => line.startsWith(key + ':'));
+  if (entries.length !== 1) return null;
+  const prefix = key + ': ';
+  if (!entries[0].startsWith(prefix)) return null;
+  const value = entries[0].slice(prefix.length);
+  return value && !/\s/.test(value) ? value : null;
+}
 export function sourceMarkers(message, prNumber, sourceSha) {
-  return (
-    String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${prNumber}`) &&
-    String(message ?? '').includes(`Source-PR-HEAD: ${sourceSha}`)
-  );
+  return marker(message, 'Foundation-Fixed-Staging-PR') === String(parsePrNumber(prNumber))
+    && marker(message, 'Source-PR-HEAD') === assertSha(sourceSha, 'source SHA');
 }
-
 export function stagingOwnershipMatches(message, prNumber) {
-  return String(message ?? '').includes(`Foundation-Fixed-Staging-PR: ${parsePrNumber(prNumber)}`);
+  return marker(message, 'Foundation-Fixed-Staging-PR') === String(parsePrNumber(prNumber));
 }
-
 function setOutput(name, value) {
   appendFileSync(requireValue(process.env.GITHUB_OUTPUT, 'GITHUB_OUTPUT'), `${name}=${value}\n`);
 }
