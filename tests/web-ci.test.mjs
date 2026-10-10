@@ -3,9 +3,18 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
+import assert from 'node:assert/strict';
 
 const workflow = parseYaml(readFileSync('.github/workflows/web-ci.yml', 'utf8'));
 const verifySteps = workflow.jobs?.verify?.steps ?? [];
+const gates = verifySteps.filter(step => /^npm (ci|run )/.test(step.run || ''));
+assert.deepEqual(gates.map(step => step.run), ['npm ci', 'npm run check', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run test:e2e']);
+assert.equal(workflow.jobs.verify['continue-on-error'], undefined);
+for (const step of gates) {
+  assert.equal(step['continue-on-error'], undefined);
+  assert.ok(!/always\(|failure\(/.test(step.if || ''), '失敗後に品質ゲートを続行しない');
+}
+assert.deepEqual(gates.map(step => step.if), [undefined, '${{ inputs.run_check }}', '${{ inputs.run_typecheck }}', '${{ inputs.run_test }}', undefined, '${{ inputs.run_e2e }}']);
 const checkout = verifySteps.find((step) => step?.name === 'Checkout');
 const contract = verifySteps.find((step) => step?.name === 'Validate npm script contract');
 const checkoutRefInput = workflow.on?.workflow_call?.inputs?.checkout_ref;

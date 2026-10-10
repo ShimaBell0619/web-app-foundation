@@ -1,0 +1,13 @@
+:root { font-family: system-ui, "Noto Sans JP", sans-serif; color: #172635; background: #f4f7fa; line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 42rem; margin: 3rem auto; padding: 1.25rem; }
+h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); line-height: 1.4; }
+label { display: block; font-weight: 600; }
+input { width: 100%; max-width: 20rem; padding: .6rem; font: inherit; border: 1px solid #63778a; border-radius: .25rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+button { min-height: 44px; padding: .6rem 1rem; font: inherit; color: #fff; background: #204f79; border: 1px solid #204f79; border-radius: .25rem; cursor: pointer; }
+button[type="button"] { color: #204f79; background: #fff; }
+:focus-visible { outline: 3px solid #a34b00; outline-offset: 3px; }
+[role="status"] { font-size: 1.2rem; font-weight: 600; overflow-wrap: anywhere; }
+[role="alert"] { color: #a12b20; }

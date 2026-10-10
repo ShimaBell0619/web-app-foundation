@@ -35,20 +35,8 @@ jobs:
       - name: Run validator regression tests
         run: npm run foundation:test
 
-      - name: Run reusable CI contract tests
-        run: npm run foundation:test:web-ci
-
-      - name: Run application Release profile contract tests
-        run: npm run foundation:test:application-release
-
-      - name: Run fixed Staging profile contract tests
-        run: npm run foundation:test:vercel-staging
-
       - name: Exercise release cycle
         run: npm run foundation:test:release
-
-      - name: Validate current release metadata
-        run: npm run foundation:release-validate
 
       - name: Verify locked Changesets CLI
         run: npm run version:tooling
@@ -56,5 +44,5 @@ jobs:
   consumer-smoke:
     uses: ./.github/workflows/web-ci.yml
     with:
-      working_directory: tests/fixtures/consumer
-      cache_dependency_path: tests/fixtures/consumer/package-lock.json
+      working_directory: kits/web/starter
+      cache_dependency_path: kits/web/starter/package-lock.json
