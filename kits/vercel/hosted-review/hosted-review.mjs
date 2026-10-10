@@ -297,7 +297,12 @@ export function validateDeploymentPayload(payload, projectId) {
   return { kind, branch, number, synthetic, id, url };
 }
 export function verifyProviderDeployment(deployment, expected, projectId) {
-  if (deployment?.id !== expected.id || deployment.projectId !== projectId ||
+  const nestedProjectId = deployment?.project?.id;
+  const flatProjectId = deployment?.projectId;
+  if (nestedProjectId && flatProjectId && nestedProjectId !== flatProjectId) {
+    throw new Error('Vercel API returned conflicting project identities');
+  }
+  if (deployment?.id !== expected.id || (nestedProjectId ?? flatProjectId) !== projectId ||
       deployment.readyState !== 'READY' || deployment.target === 'production' ||
       deployment.url !== expected.url.slice(8) ||
       deployment.meta?.githubCommitSha !== expected.synthetic ||
