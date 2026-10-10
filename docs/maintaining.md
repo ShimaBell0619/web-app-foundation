@@ -56,10 +56,10 @@ A normal change PR and a release PR have different contracts:
 
 - Run `npm run version-packages`.
 - Changesets updates `package.json` and `CHANGELOG.md` and consumes the pending Changeset files.
-- The committed sync script then updates the Foundation version mirrors in `package-lock.json`, `README.md`, and `AGENTS.md`.
+- The committed sync script updates only the Foundation version in `package-lock.json`; `package.json` is the version source. README and AGENTS do not mirror it.
 - Stage only the intended generated release-state files and the deletion of the specific consumed Changeset files. Do not use broad `git add -A` after `npm ci`; dependency trees and other generated local artifacts are not release metadata.
 - Do **not** require a new Changeset merely because the release PR has no pending Changesets.
-- Run `npm run foundation:release-validate` to verify package/lock/README/AGENTS/CHANGELOG consistency.
+- Run `npm run foundation:release-validate` to verify package/lock/CHANGELOG consistency.
 
 This separation prevents the release mechanism from rejecting its own version PR.
 
@@ -70,7 +70,7 @@ A normal Foundation release is:
 1. merge approved Issue-driven PRs with required Changesets,
 2. start from a clean checkout and run `npm ci`, Foundation validation, validator regression tests, and `npm run version:tooling`,
 3. create a release/version branch or PR and run `npm run version-packages`,
-4. review the generated package version and changelog plus the synchronized lockfile/README/AGENTS mirrors,
+4. review the generated package version and changelog plus the synchronized lockfile (no README/AGENTS version mirrors),
 5. run `npm ci`, `npm run foundation:validate`, `npm run foundation:test`, and `npm run foundation:release-validate` on the final release PR state,
 6. merge only after the release PR quality gates pass,
 7. create immutable `vX.Y.Z` release/tag evidence from that validated commit,
@@ -93,7 +93,7 @@ When an Issue/user explicitly requests a versioned application release, the comp
 - prerelease status when the milestone is intentionally beta/preview;
 - Production deployment/status verification when the application has a Production host.
 
-The copyable downstream workflow in `templates/release/release.yml` binds publication to the successful `main` CI run's `workflow_run.head_sha` and refuses to move a conflicting existing tag. See `kits/github/release/README.md` for the full application contract.
+The optional downstream workflow in `kits/github/release/workflow.yml` binds publication to the successful `main` CI run's `workflow_run.head_sha` and refuses to move a conflicting existing tag. See `kits/github/release/README.md` for the full application contract.
 
 ## Downstream provenance
 
