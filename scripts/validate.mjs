@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { validateLinks } from './validate-links.mjs';
 const need=['AGENTS.md','README.md','package.json','package-lock.json','CHANGELOG.md','docs/README.md','docs/adoption.md','docs/operations.md','docs/ui.md','docs/azure.md','docs/maintaining.md','.github/workflows/ci.yml','.github/workflows/web-ci.yml','kits/vercel/README.md','kits/github/repository-create/README.md','kits/github/release/README.md'];
 const errors=[];
 const read=path=>readFileSync(path,'utf8');
@@ -11,14 +12,7 @@ if(!read('AGENTS.md').includes('Workは明示指示のみ'))errors.push('missing
 if(/^Foundation-Version:/m.test(read('AGENTS.md')))errors.push('remove AGENTS version mirror');
 if(/Current Foundation version:/i.test(read('README.md')))errors.push('remove README version mirror');
 const scan=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?scan(join(dir,e.name)):[join(dir,e.name)]);
-for(const path of [...scan('docs').filter(s=>s.endsWith('.md')),'README.md','AGENTS.md']){
- const markdown=read(path);
- for(const m of markdown.matchAll(/\]\(([^)]+)\)/g)){
-  const href=m[1].split('#')[0];
-  if(!href||/^(https?:|mailto:)/i.test(href))continue;
-  if(!existsSync(resolve(dirname(path),decodeURIComponent(href))))errors.push('broken link '+path+' => '+href);
- }
-}
+errors.push(...validateLinks('.', [...scan('docs'), ...scan('kits')].filter(s=>s.endsWith('.md')).concat(['README.md','AGENTS.md'])));
 for(const path of [...scan('.github/workflows'),...scan('kits')].filter(x=>/\.ya?ml$/.test(x))){
  try{const v=parseYaml(read(path));if(!v||typeof v!=='object')errors.push('invalid YAML: '+path);}
  catch(e){errors.push('invalid YAML: '+path+' '+e.message);}

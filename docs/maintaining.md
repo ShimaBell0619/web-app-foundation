@@ -1,34 +1,16 @@
-# Versioning and Release Discipline
+# バージョンと保守
 
-## Default model
+## 版の正本とSemVer
 
-Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for Web App Foundation and, by default, for applications derived from it. `package.json` is the Foundation version source; root lockfile and the latest released CHANGELOG entry must agree with it. README/AGENTS do not mirror version strings.
+Foundationと採用先は原則Semantic Versioning（MAJOR.MINOR.PATCH）を使います。Foundationの版の正本はpackage.json、root lockfileと最新releaseのCHANGELOGは一致させます。README／AGENTSへ版を重複記載しません。版はcommit SHA、Deployment ID、DB移行版、環境名の代用ではありません。
 
-Version numbers communicate product/repository compatibility. They are not substitutes for deployment identifiers, commit SHAs, database migration versions, or environment names.
+0.xでは互換修正・説明の補正をpatch、新しい採用先向け機能・意図的な契約破壊をminorにします。破壊的変更はCHANGELOGに明示します。1.0.0は実採用先の証拠に基づく安定性判断であり、採用先アプリは独立して1.0.0へ進めます。1.0.0以降は互換修正patch、互換機能minor、非互換の公開契約変更majorです。
 
-Downstream application releases are a separate concern from Foundation releases. When an application explicitly publishes a versioned milestone, use `kits/github/release/README.md`; a Git tag alone is not considered a complete release when the requested contract calls for a published GitHub Release.
+## Changesetsと通常PR
 
-## Pre-1.0 policy
+採用先に影響する契約・共通Workflow・release関連変更にはChangesetを追加します。契約を変えないtest、書式、内部整理は不要な理由をPRへ記録します。品質CIはファイル変更だけからrelease意図を推測しません。
 
-While Foundation `MAJOR = 0`:
-
-- **patch** — backward-compatible fixes, clarifications, or small consumer-visible corrections that do not add a meaningful new Foundation capability,
-- **minor** — new consumer-facing capabilities and any intentional breaking Foundation-contract change,
-- breaking changes must be called out explicitly in `CHANGELOG.md` even though the numeric major remains `0`.
-
-The decision to release `1.0.0` is a deliberate stability gate backed by real-consumer evidence. A downstream application may reach `1.0.0` independently.
-
-## Stable SemVer policy
-
-After `1.0.0`: patch = compatible bug fix, minor = compatible functionality, major = incompatible public/product/reusable-contract change.
-
-## Changesets
-
-Use Changesets to record version intent for consumer-visible or release-relevant work. Reusable workflow contract changes count as consumer-facing changes even though they live under `.github/`.
-
-A Changeset is normally unnecessary only when the change truly does not alter a consumer-facing contract, such as test-only additions, formatting, or internal refactoring.
-
-The CLI is an exact `@changesets/cli` devDependency covered by the committed lockfile. `npm ci` installs the release tooling used by these scripts:
+exact版の@changesets/cliをlockfileで管理し、npm ciで導入します。場当たり的なnpx解決へ置き換えません。
 
 ```bash
 npm run changeset
@@ -37,72 +19,26 @@ npm run version-packages
 npm run tag-version
 ```
 
-`npm run version:status` is a **local diagnostic**, not an unconditional CI quality gate. A release/version PR has already consumed the pending Changesets, and a Changeset-exempt change is intentionally allowed to have none. CI therefore verifies that the locked CLI is installed and executable without requiring a pending Changeset on every PR.
+version:statusはローカル診断です。release PRはChangeset消費済み、対象外PRはChangesetなしで正当なため、すべてのCIでpending Changesetを必須にしません。CLIの実行可能性を検査します。
 
-Do not replace release tooling with ad-hoc `npx` resolution.
+## release PRと公開
 
-## Normal change PR versus release PR
+1. 承認済みの通常PRと必要なChangesetをマージします。
+2. clean checkoutでnpm ci、Foundation検証・回帰テスト、version:toolingを実行します。
+3. release branchでversion-packagesを実行します。package.json、CHANGELOG、lockfileの版を更新し、消費済みChangesetだけを削除します。
+4. 生成されたrelease状態をレビューします。npm ci後に無差別なgit add -Aを使わず、対象metadataだけをstageします。release PRへ新Changesetを要求しません。
+5. 最終状態でnpm ci、foundation:validate、foundation:test、foundation:release-validateを実行し、CI成功後にマージします。
+6. 検証commitから不変のvX.Y.Z tag／GitHub Releaseを公開し、採用先は明示的に更新します。既存tagを移動しません。
 
-A normal change PR and a release PR have different contracts:
+v0.11.0／v0.12.0／v0.12.1は独立レビュー済み・Owner起動の一回限りWorkflowを使い、公開後に常設場所から削除しました（Issues #93・#98、v0.12.0 run 38030557699、v0.12.1 run 38030930756）。過去の公開用Workflowを再利用しません。今後も明示承認済みの公開経路を別途レビューし、利用後に削除します。[索引](README.md) は現行Workflowだけを列挙します。完全なrelease手順を実証してから次版の公開を実証済みとします。
 
-### Normal change PR
+## 採用先のreleaseと由来
 
-- Add a Changeset when the change is consumer-visible or release-relevant.
-- Use the PR template to state explicitly when a Changeset is not required.
-- Quality CI validates the Foundation, but does not infer release intent solely from “some file changed in this root package”.
-- `npm run version:status` may be used by a developer/agent as an additional diagnostic when appropriate.
+通常の機能マージから版更新や公開を推測しません。明示的な版付きreleaseでは、要求SemVer、正確な検証commit、不変tag、published Release、beta等のprerelease、必要ならProductionの証拠を揃えます。tagだけでGitHub Release完了とは扱いません。[Release Kit](../kits/github/release/README.md) は成功main CIのworkflow_run.head_shaへ公開を結び付け、競合tagを拒否します。
 
-### Release/version PR
+コピーした規則／テンプレートの採用元SHAと共通Workflowの参照SHAは両方記録します。異なっていてもよく、明示的に更新します。アプリ固有差分を別に記録し、Foundation更新で上書きしません。
 
-- Run `npm run version-packages`.
-- Changesets updates `package.json` and `CHANGELOG.md` and consumes the pending Changeset files.
-- The committed sync script updates only the Foundation version in `package-lock.json`; `package.json` is the version source. README and AGENTS do not mirror it.
-- Stage only the intended generated release-state files and the deletion of the specific consumed Changeset files. Do not use broad `git add -A` after `npm ci`; dependency trees and other generated local artifacts are not release metadata.
-- Do **not** require a new Changeset merely because the release PR has no pending Changesets.
-- Run `npm run foundation:release-validate` to verify package/lock/CHANGELOG consistency.
-
-This separation prevents the release mechanism from rejecting its own version PR.
-
-## Release sequence
-
-A normal Foundation release is:
-
-1. merge approved Issue-driven PRs with required Changesets,
-2. start from a clean checkout and run `npm ci`, Foundation validation, validator regression tests, and `npm run version:tooling`,
-3. create a release/version branch or PR and run `npm run version-packages`,
-4. review the generated package version and changelog plus the synchronized lockfile (no README/AGENTS version mirrors),
-5. run `npm ci`, `npm run foundation:validate`, `npm run foundation:test`, and `npm run foundation:release-validate` on the final release PR state,
-6. merge only after the release PR quality gates pass,
-7. create immutable `vX.Y.Z` release/tag evidence from that validated commit,
-8. downstream apps adopt the new Foundation deliberately.
-
-Do not mutate an existing released tag to point at different code. The complete release procedure should be exercised before the next Foundation release is treated as proven.
-
-The v0.11.0, v0.12.0 and v0.12.1 releases used separate **one-shot, Owner-triggered** workflows (Issues #93 and #98 respectively). After publication each special-purpose privileged workflow was removed from active `.github/workflows/`. The immutable tags, GitHub Releases and action run history are the audit evidence; the v0.12.0 and v0.12.1 runs were `38030557699` and `38030930756` respectively. Do not reuse past release-specific workflows. For a later Foundation release, create an independently reviewed, explicitly scoped Owner-approved publishing path, then remove it after use. The [documentation and workflow index](README.md) lists only active workflows.
-
-## Downstream application release intent
-
-Application release publication must remain explicit. Do not infer that every merged feature PR should bump an application version or publish a release.
-
-When an Issue/user explicitly requests a versioned application release, the completion evidence should include:
-
-- the application-owned version source at the requested SemVer;
-- the exact validated commit intended for release;
-- immutable `vX.Y.Z` tag evidence;
-- a published GitHub Release associated with that tag;
-- prerelease status when the milestone is intentionally beta/preview;
-- Production deployment/status verification when the application has a Production host.
-
-The optional downstream workflow in `kits/github/release/workflow.yml` binds publication to the successful `main` CI run's `workflow_run.head_sha` and refuses to move a conflicting existing tag. See `kits/github/release/README.md` for the full application contract.
-
-## Downstream provenance
-
-An application records both the commit from which copied Foundation rules/templates were adopted and the exact full commit SHA referenced by reusable workflows. These can differ and must be upgraded deliberately. Record app-specific deviations separately so Foundation upgrades do not erase local decisions.
-
-
-## CI performance
-
-# CIの性能とキャッシュ運用
+## CIの性能とキャッシュ運用
 
 ## 既定のキャッシュ
 

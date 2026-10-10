@@ -1,4 +1,4 @@
-# GitHub private repository creation (optional kit)
+# GitHub Privateリポジトリ作成Kit（任意）
 
 このkitは、ChatからOwnerによる明示的な承認を受けた**private repositoryの新規作成**だけに利用します。Foundation自身のGitHub Actionsでは実行されません。
 
