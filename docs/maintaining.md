@@ -78,7 +78,7 @@ A normal Foundation release is:
 
 Do not mutate an existing released tag to point at different code. The complete release procedure should be exercised before the next Foundation release is treated as proven.
 
-The v0.11.0-only publishing workflow (fixed Issue #93 and fixed `/publish-foundation-v0.11.0` command) has completed its release and was **removed from active `.github/workflows/`**. Its execution history and the published tag/Release remain the audit evidence. Do not reuse this release-specific workflow for a different version; implement an explicitly scoped, owner-approved publishing path for each future Foundation release (or introduce a separately reviewed generic release contract). The [documentation and workflow index](README.md) lists only currently active workflows.
+The v0.11.0 and v0.12.0 releases used separate **one-shot, Owner-triggered** workflows (Issues #93 and #98 respectively). After publication each special-purpose privileged workflow was removed from active `.github/workflows/`. The immutable tags, GitHub Releases and action run history are the audit evidence; the v0.12.0 run was `38030557699`. Do not reuse past release-specific workflows. For a later Foundation release, create an independently reviewed, explicitly scoped Owner-approved publishing path, then remove it after use. The [documentation and workflow index](README.md) lists only active workflows.
 
 ## Downstream application release intent
 
