@@ -3,8 +3,8 @@ import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 const files=readdirSync('.github/workflows').filter(x=>/\.ya?ml$/.test(x)).sort();
-test('only two permanent workflows plus exact one-shot patch publisher are present',()=>assert.deepEqual(files,['ci.yml','publish-foundation-v0121.yml','web-ci.yml']));
-for(const filename of files.filter(f => f !== 'publish-foundation-v0121.yml')){
+test('only two ordinary Foundation workflows are active',()=>assert.deepEqual(files,['ci.yml','web-ci.yml']));
+for(const filename of files){
   const workflow=parseYaml(readFileSync('.github/workflows/'+filename,'utf8'));
   test(filename+' has a read-only trust boundary',()=>{
     assert.equal(workflow.permissions?.contents,'read');
@@ -21,16 +21,4 @@ test('web-ci executes without inherited secrets',()=>{
 const ci=parseYaml(readFileSync('.github/workflows/web-ci.yml','utf8'));
 assert.ok(ci.on?.workflow_call);assert.equal(ci.env?.CI,'true');
 assert.equal(ci.jobs.verify.secrets,undefined);
-});
-
-test('one-shot v0.12.1 publisher requires explicit owner command on Issue 98',()=>{
-const w=parseYaml(readFileSync('.github/workflows/publish-foundation-v0121.yml','utf8'));
-assert.deepEqual(w.on?.issue_comment?.types,['created']);
-assert.deepEqual(w.permissions,{contents:'read'});
-assert.deepEqual(w.jobs.publish.permissions,{contents:'write',actions:'read'});
-const j=w.jobs.publish;
-for(const s of ["github.event.issue.number == 98", "github.event.comment.author_association == 'OWNER'", "/publish-foundation-v0.12.1"])assert.ok(j.if.includes(s));
-assert.equal(j.env.EXPECTED_VERSION,'0.12.1');
-assert.equal(j.env.RELEASE_TAG,'v0.12.1');
-for(const step of j.steps)if(step.uses)assert.match(step.uses,/@[0-9a-f]{40}$/i);
 });
