@@ -42,7 +42,7 @@ Each application should make the following rationale explicit in `DESIGN.md` whe
 
 The Foundation does not prescribe a shared product skin. Do not copy another consumer's colors, radii, typography, motifs, or dashboard structure merely because that consumer validated a useful design principle.
 
-Implementation primitives and product visual identity are separate concerns. For the current React baseline, `docs/ui-implementation.md` defines the default primitive-first layering; this `DESIGN.md` remains authoritative for the application's information hierarchy, composition, token meaning, typography, density, and visual rationale.
+Implementation primitives and product visual identity are separate concerns. For the current React baseline, `docs/ui.md` defines the default primitive-first layering; this `DESIGN.md` remains authoritative for the application's information hierarchy, composition, token meaning, typography, density, and visual rationale.
 
 ## Colors
 
@@ -92,7 +92,7 @@ Implementation primitives and product visual identity are separate concerns. For
 ## Components
 
 - Prefer semantic HTML and accessible platform behavior before custom interaction primitives.
-- For the current React baseline, start common controls from the default profile in `docs/ui-implementation.md`: Tailwind CSS styling infrastructure plus shadcn/ui-style accessible generic primitives where applicable.
+- For the current React baseline, start common controls from the default profile in `docs/ui.md`: Tailwind CSS styling infrastructure plus shadcn/ui-style accessible generic primitives where applicable.
 - Keep generic primitive code free of product-domain meaning, and build product-specific semantic components above it.
 - Reuse proven component primitives when they improve accessibility and consistency.
 - Create app-specific reusable components only when a real pattern repeats or expresses a durable product interaction rule.
@@ -133,6 +133,6 @@ Implementation primitives and product visual identity are separate concerns. For
 - Do not treat a single desktop screenshot as responsive validation.
 - Do not make an external design file the only source of truth required for routine AI implementation.
 
-See `docs/ui-implementation.md` for the primitive-first implementation profile and `docs/ui-review.md` for the rendered-review method, generic/AI-template review signals, viewport baseline, accessibility checks, and Japanese/CJK rendering notes.
+See `docs/ui.md` for the primitive-first implementation profile and `docs/ui.md` for the rendered-review method, generic/AI-template review signals, viewport baseline, accessibility checks, and Japanese/CJK rendering notes.
 
 Google's DESIGN.md format is currently alpha. Preserve valid machine-readable front matter, prefer the reviewed published schema over invented fields, and keep unsupported but important design rationale in Markdown prose until the specification can represent it directly.
