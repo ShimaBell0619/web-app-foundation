@@ -106,12 +106,32 @@ test('Staging occupant must have complete and unique Foundation ownership', () =
   assert.throws(() => stagingOccupantRequestId({ ...old, tree: 'd'.repeat(40) }, A, tree));
 });
 
-test('Staging only rejects older requests if later request is authorized', async () => {
-  const comments = [{ id: 501, body: '/staging', user: { login: 'outsider' } }];
-  const client = { comments: async () => comments,
-    permission: async user => ({ permission: user === 'outsider' ? 'read' : 'write' }) };
+test('only newer, writer-authorized requests on open main-target same-repo PRs supersede Staging', async () => {
+  const issueUrl = number => 'https://api.github.com/repos/example/app/issues/' + number;
+  const comments = [
+    { id: 501, body: '/staging', issue_url: issueUrl(42), user: { login: 'outsider' } },
+    { id: 502, body: '/staging', issue_url: issueUrl(43), user: { login: 'writer' } },
+    { id: 503, body: '/staging', issue_url: issueUrl(44), user: { login: 'writer' } },
+    { id: 504, body: '/staging', issue_url: issueUrl(45), user: { login: 'writer' } },
+    { id: 505, body: '/staging', issue_url: issueUrl(46), user: { login: 'writer' } },
+    { id: 506, body: '/staging', issue_url: 'https://api.github.com/repos/other/repo/issues/47', user: { login: 'writer' } },
+    { id: 507, body: '/staging', issue_url: issueUrl(48), user: { login: 'writer' } },
+  ];
+  const client = {
+    repo,
+    comments: async () => comments,
+    permission: async user => ({ permission: user === 'outsider' ? 'read' : 'write' }),
+    pr: async number => {
+      if (number === 43) return { ...pr, state: 'closed' };
+      if (number === 44) return { ...pr, base: { ...pr.base, ref: 'develop' } };
+      if (number === 45) return { ...pr, head: { ...pr.head, repo: { full_name: 'some/fork' } } };
+      if (number === 46) return { ...pr, base: { ...pr.base, repo: { full_name: 'other/repo' } } };
+      if (number === 48) return null; // issue, not a PR
+      return pr;
+    },
+  };
   assert.equal(await newerStagingRequest(client, 500, '2026-10-10T00:00:00Z'), false);
-  comments.push({ id: 503, body: '/staging', user: { login: 'writer' } });
+  comments.push({ id: 508, body: '/staging', issue_url: issueUrl(49), user: { login: 'writer' } });
   assert.equal(await newerStagingRequest(client, 500, '2026-10-10T00:00:00Z'), true);
 });
 
