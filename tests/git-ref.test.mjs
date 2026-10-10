@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { buildStagingPushArgs, stagingOwnershipMatches, sourceMarkers } from '../kits/vercel/fixed-staging/staging-slot.mjs';
+import { leaseArgs } from '../kits/vercel/hosted-review/hosted-review.mjs';
 import { ownedBy, matchesSource } from '../kits/vercel/shared/provenance.mjs';
 
 test('real Git enforces exact tree, ownership, SHA lease and cleanup', () => {
@@ -52,31 +52,31 @@ test('real Git enforces exact tree, ownership, SHA lease and cleanup', () => {
     git(['push', 'origin', A + ':refs/heads/staging']);
 
     const B = synthetic(A, sourceTree, 'Fixed-Staging', 42);
-    assert.equal(sourceMarkers(B.message, 42, A), true);
-    assert.equal(stagingOwnershipMatches(B.message, 4), false);
-    git(buildStagingPushArgs(B.sha, A));
+    assert.equal(matchesSource(B.message, 'Fixed-Staging', 42, A), true);
+    assert.equal(ownedBy(B.message, 'Fixed-Staging', 4), false);
+    git(leaseArgs('staging', B.sha, A));
     assert.equal(remoteSha('refs/heads/staging'), B.sha);
 
     // A newer PR may overwrite the one shared Staging slot with a Git lease.
     const C = synthetic(A, sourceTree, 'Fixed-Staging', 43);
-    git(buildStagingPushArgs(C.sha, B.sha));
+    git(leaseArgs('staging', C.sha, B.sha));
     assert.equal(remoteSha('refs/heads/staging'), C.sha);
 
     // The old owner is not allowed to remove another PR's current slot.
-    assert.equal(stagingOwnershipMatches(C.message, 42), false);
-    assert.equal(stagingOwnershipMatches(C.message, 43), true);
-    assert.throws(() => git(buildStagingPushArgs(A, B.sha)), /Command failed/);
+    assert.equal(ownedBy(C.message, 'Fixed-Staging', 42), false);
+    assert.equal(ownedBy(C.message, 'Fixed-Staging', 43), true);
+    assert.throws(() => git(leaseArgs('staging', A, B.sha)), /Command failed/);
     assert.equal(remoteSha('refs/heads/staging'), C.sha);
 
     // The verified current owner can reset to main, with the observed SHA as lease.
-    git(buildStagingPushArgs(A, C.sha));
+    git(leaseArgs('staging', A, C.sha));
     assert.equal(remoteSha('refs/heads/staging'), A);
 
     const P = synthetic(A, sourceTree, 'Preview', 42);
     assert.equal(matchesSource(P.message, 'Preview', 42, A), true);
     assert.equal(ownedBy(P.message, 'Preview', 4), false);
     const previewRef = 'refs/heads/preview/pr-42';
-    git(['push', 'origin', P.sha + ':' + previewRef]);
+    git(leaseArgs('preview/pr-42', P.sha, null));
     assert.equal(remoteSha(previewRef), P.sha);
     git(['push', 'origin', ':' + previewRef, '--force-with-lease=' + previewRef + ':' + P.sha]);
     assert.equal(remoteSha(previewRef), '');
