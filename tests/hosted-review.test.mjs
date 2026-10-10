@@ -138,6 +138,8 @@ test('only newer, writer-authorized requests on open main-target same-repo PRs s
 test('self-asserted webhook cannot override provider or GitHub source evidence', async () => {
   const valid = validateDeploymentPayload(payload, project);
   verifyProviderDeployment(provider, valid, project);
+  verifyProviderDeployment({ ...provider, project: { id: project }, projectId: undefined }, valid, project);
+  assert.throws(() => verifyProviderDeployment({ ...provider, project: { id: 'other' } }, valid, project), /conflicting project/);
   assert.throws(() => validateDeploymentPayload({ ...payload, project: { id: 'other' } }, project));
   assert.throws(() => validateDeploymentPayload({ ...payload, state: { type: 'failed' } }, project));
   assert.throws(() => verifyProviderDeployment({ ...provider, readyState: 'BUILDING' }, valid, project));
