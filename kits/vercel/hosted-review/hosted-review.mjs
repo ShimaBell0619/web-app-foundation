@@ -95,6 +95,11 @@ export function createGitHubClient({ token, repository, fetchFn = fetch, apiUrl 
       return response ? sha(response?.object?.sha) : null;
     },
     commit: hash => get('/git/commits/' + sha(hash)),
+    mainAncestor: async (older, currentMain) => {
+      const comparison = await get('/compare/' + sha(older) + '...' + sha(currentMain) + '?per_page=1');
+      return comparison?.status === 'ahead' && comparison?.behind_by === 0 &&
+        comparison?.merge_base_commit?.sha === older;
+    },
   };
 }
 async function writer(client, actor) {
@@ -142,9 +147,9 @@ export function isOwnedSource(commit, kind, number, source, tree) {
     matchesSource(commit.message, mode(kind).trailer, number, source);
 }
 
-export function stagingOccupantRequestId(commit, mainSha, sourceTree) {
+export function stagingOccupantRequestId(commit, mainSha, sourceTree, verifiedMainAncestor = false) {
   if (!commit || !SHA.test(mainSha)) throw new Error('missing trusted Staging occupant');
-  if (commit.sha === mainSha) return 0;
+  if (commit.sha === mainSha || verifiedMainAncestor === true) return 0;
   const number = prNumber(readUniqueTrailer(commit.message, 'Foundation-Fixed-Staging-PR'));
   const source = sha(readUniqueTrailer(commit.message, 'Source-PR-HEAD'));
   const id = commentId(readUniqueTrailer(commit.message, 'Foundation-Staging-Request-ID'));
@@ -241,7 +246,11 @@ export async function publish(client, { kind, number, source, id }) {
     const mainSha = await client.ref('main');
     const priorSource = readUniqueTrailer(current.message, 'Source-PR-HEAD');
     const priorTree = old === mainSha ? null : (SHA.test(priorSource ?? '') ? git(['show', '-s', '--format=%T', priorSource]) : null);
-    const previousId = stagingOccupantRequestId(current, mainSha, priorTree);
+    // An untouched/cleaned-up staging ref can be an older main commit.
+    // Only GitHub-confirmed main ancestry may establish this baseline; all other tips fail closed.
+    const verifiedMainAncestor = old !== mainSha && !priorSource &&
+      await client.mainAncestor(old, mainSha);
+    const previousId = stagingOccupantRequestId(current, mainSha, priorTree, verifiedMainAncestor);
     if (previousId > id) return { skipped: 'Staging is owned by a newer request' };
   }
   const synthetic = buildSynthetic(source, tree, kind, number, id);
