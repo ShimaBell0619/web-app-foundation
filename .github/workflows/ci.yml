@@ -56,5 +56,5 @@ jobs:
   consumer-smoke:
     uses: ./.github/workflows/web-ci.yml
     with:
-      working_directory: fixtures/consumer
+      working_directory: tests/fixtures/consumer
       cache_dependency_path: tests/fixtures/consumer/package-lock.json
