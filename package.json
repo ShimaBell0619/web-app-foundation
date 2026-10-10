@@ -7,15 +7,15 @@
     "node": "^24.20.0 || >=26.0.0"
   },
   "scripts": {
-    "foundation:validate": "node scripts/validate-foundation.mjs && node scripts/validate-docs-inventory.mjs && node scripts/validate-release-state.mjs",
-    "foundation:test": "node scripts/test-web-ci-contract.mjs && node scripts/test-application-release-contract.mjs && node scripts/test-vercel-on-demand-preview-contract.mjs && node scripts/test-repo-create-contract.mjs && node --test scripts/test-vercel-fixed-staging-contract.mjs scripts/test-vercel-fixed-staging-context.mjs scripts/test-docs-inventory.mjs tests/workflow-security.test.mjs",
-    "foundation:test:web-ci": "node scripts/test-web-ci-contract.mjs",
-    "foundation:test:application-release": "node scripts/test-application-release-contract.mjs",
-    "foundation:test:vercel-staging": "node --test scripts/test-vercel-fixed-staging-contract.mjs scripts/test-vercel-fixed-staging-context.mjs",
-    "foundation:test:release": "node scripts/test-release-cycle.mjs",
+    "foundation:validate": "node scripts/validate.mjs && node scripts/validate-docs-inventory.mjs && node scripts/validate-release-state.mjs",
+    "foundation:test": "node tests/web-ci.test.mjs && node tests/release.test.mjs && node tests/preview.test.mjs && node tests/repository-create.test.mjs && node --test tests/staging.test.mjs tests/staging-context.test.mjs tests/repository.test.mjs tests/workflow-security.test.mjs",
+    "foundation:test:web-ci": "node tests/web-ci.test.mjs",
+    "foundation:test:application-release": "node tests/release.test.mjs",
+    "foundation:test:vercel-staging": "node --test tests/staging.test.mjs tests/staging-context.test.mjs",
+    "foundation:test:release": "node tests/release-cycle.test.mjs",
     "foundation:release-validate": "node scripts/validate-release-state.mjs",
     "changeset": "changeset",
-    "version-packages": "changeset version && node scripts/sync-foundation-version.mjs",
+    "version-packages": "changeset version && node scripts/sync-version.mjs",
     "version:status": "changeset status",
     "version:tooling": "changeset --version",
     "tag-version": "changeset tag"

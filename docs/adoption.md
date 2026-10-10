@@ -1,7 +1,7 @@
 # Foundation導入
 
 1. 新規アプリの要求・受け入れ条件を確認し、Foundationのレビュー済みコミットSHAを確定します。
-2. [PRODUCT.base.md](../PRODUCT.base.md)と[DESIGN.base.md](../DESIGN.base.md)を採用先のPRODUCT.md、DESIGN.mdへコピーして**製品固有**の内容に書き換えます。
+2. [PRODUCT.base.md](../kits/web/PRODUCT.md)と[DESIGN.base.md](../kits/web/DESIGN.md)を採用先のPRODUCT.md、DESIGN.mdへコピーして**製品固有**の内容に書き換えます。
 3. [AGENTS.md](../AGENTS.md)を採用先に合わせてコピーし、実在しないローカルパスを参照しないよう調整します。共通規範の二重管理はしません。
 4. Nodeのバージョン、lockfile、check/typecheck/test/buildを用意します。no-opで品質ゲートを偽装しません。
 5. Foundationの[web-ci.yml](../.github/workflows/web-ci.yml)を40桁のレビュー済みコミットSHAで呼び出す、アプリ所有のCI callerを作ります。

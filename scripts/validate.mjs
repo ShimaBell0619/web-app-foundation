@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-const need=['AGENTS.md','README.md','package.json','package-lock.json','CHANGELOG.md','docs/README.md','docs/adoption.md','docs/operations.md','docs/ui.md','docs/azure.md','docs/maintaining.md','.github/workflows/foundation-ci.yml','.github/workflows/web-ci.yml','kits/vercel/README.md','kits/github/repository-create/README.md','kits/github/release/README.md'];
+const need=['AGENTS.md','README.md','package.json','package-lock.json','CHANGELOG.md','docs/README.md','docs/adoption.md','docs/operations.md','docs/ui.md','docs/azure.md','docs/maintaining.md','.github/workflows/ci.yml','.github/workflows/web-ci.yml','kits/vercel/README.md','kits/github/repository-create/README.md','kits/github/release/README.md'];
 const errors=[];
 const read=path=>readFileSync(path,'utf8');
 for(const path of need)if(!existsSync(path))errors.push('missing '+path);

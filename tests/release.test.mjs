@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 
-const path = 'templates/release/release.yml';
+const path = 'kits/github/release/workflow.yml';
 const workflow = parseYaml(readFileSync(path, 'utf8'));
 const job = workflow.jobs?.release;
 assert.ok(job, 'release job must exist');

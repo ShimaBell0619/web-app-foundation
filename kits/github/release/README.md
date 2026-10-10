@@ -29,7 +29,7 @@ Do not bump the application version for every ordinary PR. Update it when there 
 
 ## Copyable workflow
 
-`templates/release/release.yml` is an application-owned template for repositories whose quality workflow is named `CI` and runs on `main`.
+`kits/github/release/workflow.yml` is an application-owned template for repositories whose quality workflow is named `CI` and runs on `main`.
 
 The template:
 

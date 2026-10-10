@@ -14,5 +14,5 @@
 
 | Foundationで常時有効なWorkflow | 役割 |
 | --- | --- |
-| [`.github/workflows/foundation-ci.yml`](../.github/workflows/foundation-ci.yml) | Foundation PR/mainの品質検証 |
+| [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | Foundation PR/mainの品質検証 |
 | [`.github/workflows/web-ci.yml`](../.github/workflows/web-ci.yml) | 読み取り専用の再利用Web品質CI |

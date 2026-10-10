@@ -10,7 +10,7 @@ import {
   sourceMarkers,
   stagingOwnershipMatches,
   validateDeployablePullRequest,
-} from '../templates/vercel/fixed-staging/staging-slot.mjs';
+} from '../kits/vercel/fixed-staging/staging-slot.mjs';
 
 const REPOSITORY = 'example/app';
 const SHA_A = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -45,7 +45,7 @@ function makePr({
 }
 
 test('manual request workflow remains a bounded read-only selector', () => {
-  const workflow = readWorkflow('templates/vercel/fixed-staging/request-staging.yml');
+  const workflow = readWorkflow('kits/vercel/fixed-staging/request-staging.yml');
   assert.ok(workflow.on?.workflow_dispatch?.inputs?.pr_number);
   assert.equal(workflow.on.workflow_dispatch.inputs.pr_number.required, true);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
@@ -61,7 +61,7 @@ test('manual request workflow remains a bounded read-only selector', () => {
 });
 
 test('publisher resolves A read-only, validates exact A, then mutates Staging', () => {
-  const workflow = readWorkflow('templates/vercel/fixed-staging/deploy-staging.yml');
+  const workflow = readWorkflow('kits/vercel/fixed-staging/deploy-staging.yml');
   assert.deepEqual(workflow.on?.workflow_run?.workflows, ['Request PR for Fixed Staging']);
   assert.deepEqual(workflow.on.workflow_run.types, ['completed']);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
@@ -121,7 +121,7 @@ test('publisher resolves A read-only, validates exact A, then mutates Staging', 
 });
 
 test('cleanup is serialized with publication and uses trusted close context', () => {
-  const workflow = readWorkflow('templates/vercel/fixed-staging/cleanup-staging.yml');
+  const workflow = readWorkflow('kits/vercel/fixed-staging/cleanup-staging.yml');
   assert.deepEqual(workflow.on?.pull_request_target?.types, ['closed']);
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   assert.equal(workflow.concurrency.group, 'fixed-staging-deploy-slot');
@@ -200,7 +200,7 @@ test('synthetic Staging provenance gives cleanup explicit PR ownership', () => {
 });
 
 test('helper preserves exact-A revalidation and content-identical synthetic invariants', () => {
-  const helper = readFileSync('templates/vercel/fixed-staging/staging-slot.mjs', 'utf8');
+  const helper = readFileSync('kits/vercel/fixed-staging/staging-slot.mjs', 'utf8');
   for (const marker of [
     'PR HEAD changed after exact-source validation',
     'PR HEAD changed before Staging mutation',
