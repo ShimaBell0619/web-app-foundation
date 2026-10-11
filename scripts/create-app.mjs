@@ -29,7 +29,7 @@ export function createApp(target, { name, foundationSha }) {
     writeFileSync(join(staging, '.github/workflows/ci.yml'), read('kits/web/ci.yml'));
     writeFileSync(join(staging, '.node-version'), read('.node-version'));
     cpSync(join(foundation, 'kits/vercel/simple.json'), join(staging, 'vercel.json'));
-    for (const path of ['README.md', 'AGENTS.md', 'VERIFICATION.md', '.github/workflows/ci.yml']) {
+    for (const path of ['README.md', 'AGENTS.md', 'DESIGN.md', 'VERIFICATION.md', '.github/workflows/ci.yml']) {
       let text = readFileSync(join(staging, path), 'utf8');
       for (const [key, value] of Object.entries(replacements)) text = text.replaceAll(key, value);
       writeFileSync(join(staging, path), text);

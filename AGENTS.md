@@ -9,7 +9,7 @@
 ## 文書とコンテキスト
 
 - Issue・合意済み依頼と受け入れ条件（Acceptance Criteria）が今回の変更範囲を決める。
-- アプリの `PRODUCT.md` は機能・制約・非対象、`DESIGN.md` はUX・デザインの正本とする。
+- アプリの `PRODUCT.md` は機能・制約・非対象、`DESIGN.md` は製品固有の視覚デザインシステム（Google DESIGN.md alpha形式のtokenと採用理由）の正本とする。共通のUI設計原則と実ブラウザ検証は `docs/ui.md` を参照する。
 - `AGENTS.md` は開発ルール、`README.md` は利用者向け案内、`docs/README.md` は専門文書と実行経路の索引。専門仕様は必要な `docs/*` に置く。
 - Issue・PR・Git履歴は判断と変更の証跡であり、現行仕様の正本ではない。
 - すべての文書を毎回読まない。`docs/README.md`で関連する文書を選び、変更対象に関係する仕様だけを追加で読む。仕様に矛盾があれば実装前に設計判断を確認する。

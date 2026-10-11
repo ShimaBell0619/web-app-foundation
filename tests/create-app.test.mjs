@@ -21,6 +21,10 @@ test('生成は文書・caller・実lockfileを揃え、依存graphを変更し�
     assert.equal(readFileSync(join(app, '.node-version'), 'utf8'), readFileSync('.node-version', 'utf8'));
     assert.match(readFileSync(join(app, '.github/workflows/ci.yml'), 'utf8'), new RegExp(`web-ci.yml@${sha}`));
     assert.match(readFileSync(join(app, 'AGENTS.md'), 'utf8'), /blob\/[a-f0-9]{40}\/AGENTS.md/);
+    const design = readFileSync(join(app, 'DESIGN.md'), 'utf8');
+    assert.match(design, /^name: fresh-app$/m);
+    assert.match(design, /^## Overview$/m);
+    assert.doesNotMatch(design, /__APP_NAME__|__TEMPLATE_SHA__/);
     assert.match(readFileSync(join(app, 'VERIFICATION.md'), 'utf8'), /未実施/);
     assert.deepEqual(json(join(app, 'vercel.json')).git.deploymentEnabled, { '**': false, main: true });
     assert.deepEqual(validateLinks(app, ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md', 'VERIFICATION.md']), []);
