@@ -1,6 +1,6 @@
 # Webアプリ用Kit
 
-[PRODUCT.md](PRODUCT.md) は製品の動作、[DESIGN.md](DESIGN.md) はUI・UXの契約テンプレートです。製品固有の内容に置き換えてから実装します。
+[PRODUCT.md](PRODUCT.md) は製品の動作、[DESIGN.md](DESIGN.md) はGoogle公式形式の**視覚デザインシステム**のテンプレートです。生成直後のDESIGN.mdは未定義であり、採用する色・書体・形状・コンポーネントのトークンと理由を製品固有の内容に置き換えてからUIを実装します。操作の契約はPRODUCT.md、共通のUI原則とブラウザ検証は[UI手順](../../docs/ui.md)を正本とします。
 
 描画確認は [UI手順](../../docs/ui.md)、導入は [adoption.md](../../docs/adoption.md) を参照してください。アプリ固有のselectorと操作シナリオは採用先が所有します。
 
