@@ -13,6 +13,14 @@ node scripts/create-app.mjs /path/to/new-app --name new-app --foundation-sha <�
 6. 必要なら [Vercel](../kits/vercel/README.md) のSimple方式でmainを接続します。main保護はユーザー方針で選択し、GitHub CI成功後のProduction公開は保証しません。特権Kitの保護条件は維持します。
 7. 最初の機能PRからアプリ固有の操作・実画面を検証し、VERIFICATION.mdへ採用元SHA・CI参照SHA・最終SHA・run ID・配備・ブラウザの証拠を記録します。
 
+公式CLIによる検証コマンド（Google 0.4.0へ固定、ランタイム依存なし）：
+
+```bash
+npx --yes --package=@google/design.md@0.4.0 designmd lint DESIGN.md
+```
+
+設計値とCSSが一致するかは、CLIの構造検証に加えて実装差分・実画面で確認します。CLIはMarkdownのtoken参照、構造、contrast等を検査しますが、CSSとの自動一致や製品UIの良否までは保証しません。公式CLIは警告でも終了コード0のため、出力をレビューして採否を判断します。生成CIにはlintジョブが含まれます。
+
 配布物の正本は [Web Kit](../kits/web/README.md) です。生成先にはlockfile、日本語文書、Node指定、Simple設定、SHA固定callerが揃います。未コミットのFoundationから生成した場合は検証記録にその状態が表示されます。正式採用前にclean checkoutから再生成してください。
 
 必要な機能だけ [Release](../kits/github/release/README.md)、[Azure](azure.md)、Controlledから選択導入します。採用先を更新するときは、コピーしたテンプレートSHAとCI参照SHAを別々に点検し、アプリ固有差分を維持します。旧パス・権限・認証設定を暗黙に引き継ぎません。
