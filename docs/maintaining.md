@@ -30,7 +30,7 @@ version:statusはローカル診断です。release PRはChangeset消費済み�
 5. 最終状態でnpm ci、foundation:validate、foundation:test、foundation:release-validateを実行し、CI成功後にマージします。
 6. 検証commitから不変のvX.Y.Z tag／GitHub Releaseを公開し、採用先は明示的に更新します。既存tagを移動しません。
 
-v0.11.0／v0.12.0／v0.12.1は独立レビュー済み・Owner起動の一回限りWorkflowを使い、公開後に常設場所から削除しました（Issues #93・#98、v0.12.0 run 38030557699、v0.12.1 run 38030930756）。過去の公開用Workflowを再利用しません。今後も明示承認済みの公開経路を別途レビューし、利用後に削除します。[索引](README.md) は現行Workflowだけを列挙します。完全なrelease手順を実証してから次版の公開を実証済みとします。
+v0.11.0／v0.12.0／v0.12.1は独立レビュー済み・Owner起動の一回限りWorkflowを使い、公開後に常設場所から削除しました（Issues #93・#98、v0.12.0 run 38030557699、v0.12.1 run 38030930756）。過去の公開用Workflowを再利用しません。今後は明示承認済みの認証済みAPI／CLIで既存の手順を完結できるか先に確認し、一時Workflowの追加・削除を既定の義務にしません。特権Workflowが必要なら信頼境界をレビューし、利用後に削除します。[索引](README.md) は現行Workflowだけを列挙します。完全なrelease手順を実証してから次版の公開を実証済みとします。
 
 ## 採用先のreleaseと由来
 

@@ -20,7 +20,7 @@ mainへのpushでGitHub CIとVercel buildは独立して進みます。CI失敗�
 
 この任意のアプリ所有Kitは、同じリポジトリのopen PR（base=`main`）に対する明示的な `/preview` と `/staging` だけを扱います。既存アプリへ自動導入しません。
 
-1. [hosted-review/workflow.yml](hosted-review/workflow.yml) を `.github/workflows/hosted-review.yml` へコピーし、[hosted-review/hosted-review.mjs](hosted-review/hosted-review.mjs) と [shared/provenance.mjs](shared/provenance.mjs) をWorkflowの参照パスを保ってコピーします。Foundation自身の常設Workflowは2本のままです。
+1. [hosted-review/workflow.yml](hosted-review/workflow.yml) を `.github/workflows/hosted-review.yml` へコピーし、[hosted-review/hosted-review.mjs](hosted-review/hosted-review.mjs) と [shared/provenance.mjs](shared/provenance.mjs) をWorkflowの参照パスを保ってコピーします。特権Workflowは採用先が所有し、Foundationの通常CIへ混ぜません。
 2. [vercel.json](vercel.json) または [vite-spa.json](vite-spa.json) のControlled設定を取り込みます。許可refは `main`、`preview/**`、`staging` だけです。Git連携の追跡設定と不要なブランチが配備されないことを確認します。固定枠が必要なら `staging` をmainから初期化し、固定ホスト名を設定します。
 3. Repository Variable `VERCEL_PROJECT_ID`、Deployment読み取り用の最小権限Secret `VERCEL_API_TOKEN`、必要なら `VERCEL_TEAM_ID`、固定Staging用 `FIXED_STAGING_URL`（HTTPS origin・末尾 `/`）を設定します。標準の `repository_dispatch` 通知 `vercel.deployment.ready` を有効にします。独自通知ブリッジは不要です。tokenはコミットしません。
 4. `web-ci.yml` のpinをレビュー済み40桁SHAへ更新します。正確なPR HEADでnpmの品質ゲートを通し、token権限、mainの保護／ruleset、Vercel account・projectの対応、スモークを確認します。
@@ -63,4 +63,4 @@ mainへのpushでGitHub CIとVercel buildは独立して進みます。CI失敗�
 
 ## 証拠の記録
 
-CI runとcheckout SHA、project／Deployment ID、Git source SHA、READY、alias照合、ブラウザURL・viewport・画像・主要操作を採用先の検証文書に記録します。公開テストにCIのGITHUB_SHAを無条件で転用しません。既定では公開テスト用tokenをGitHub CIへ追加しません。
+CI run・attemptとcheckout SHA、project／Deployment ID、公開source SHA、READY、alias照合、ブラウザの結果を該当PR／Actionsに記録します。恒久的な検証Markdownへの重複転記は必須にしません。PR HEAD・main・公開source SHAの結果を区別し、必要なmain CIの失敗・未完了をREADYだけで完了扱いしません。公開テストにCIのGITHUB_SHAを無条件で転用しません。既定では公開テスト用tokenをGitHub CIへ追加しません。

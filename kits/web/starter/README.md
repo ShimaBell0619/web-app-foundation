@@ -12,11 +12,14 @@ npm run check
 npm run typecheck
 npm test
 npm run build
+npm run design:lint
 npm run test:e2e
 npm run dev
 ```
 
 結果はGitHubのIssue・PR・Actionsへ記録します。開発規則は [AGENTS.md](AGENTS.md) を読みます。初期画面の検証は、後から作る製品の受け入れ検証とは別です。
+
+checkは構成・JavaScript構文・React Hooks規則を、typecheckはTypeScriptの型を検査します。design:lintはlockfileに固定したGoogle CLIを使います。DESIGNとCSSの対応や実際の画面・操作は別に確認します。
 
 この小さなスターターはsemantic HTMLとCSSを使います。通常のReact製品で部品が必要になったら、採用元のUI方針に沿って成熟したアクセシブルな部品を選びます。
 

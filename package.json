@@ -8,6 +8,7 @@
   },
   "scripts": {
     "foundation:validate": "node scripts/validate.mjs && node scripts/validate-docs-inventory.mjs && node scripts/validate-release-state.mjs",
+    "design:lint": "designmd lint kits/web/DESIGN.md",
     "foundation:test": "node tests/web-ci.test.mjs && node tests/release.test.mjs && node tests/repository-create.test.mjs && node --test tests/create-app.test.mjs tests/repository.test.mjs tests/workflow-security.test.mjs tests/vercel-provenance.test.mjs tests/git-ref.test.mjs tests/hosted-review.test.mjs && node --test tests/adoption-smoke.test.mjs",
     "foundation:test:web-ci": "node tests/web-ci.test.mjs",
     "foundation:test:application-release": "node tests/release.test.mjs",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "3.0.2",
+    "@google/design.md": "0.4.0",
     "yaml": "2.9.0"
   }
 }

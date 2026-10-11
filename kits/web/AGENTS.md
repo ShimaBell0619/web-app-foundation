@@ -1,9 +1,7 @@
-# 採用先の開発規則
+## アプリ固有規則
 
-[Foundationの共通規則](https://github.com/ShimaBell0619/web-app-foundation/blob/__TEMPLATE_SHA__/AGENTS.md) を取得して適用してください。Chat-first、Workは明示指示のみ、日本語標準、承認・信頼境界を維持します。
+この節は採用先が所有する。共通規則からの明示的な変更はここに記録し、Foundation更新で上書きしない。ユーザーの明示指示を優先し、参照ガイドから新しい必須規則を推測しない。
 
-- [PRODUCT.md](PRODUCT.md) は製品目的・利用者への重要な保証・制約を示し、機能一覧の追記を必須としません。実装とデータ形式はコード、重要な動作はテスト、視覚設計は [DESIGN.md](DESIGN.md) を正本とします。
-- UIの初期設計から、採用元の[文言・装飾の採用基準とUI手順](https://github.com/ShimaBell0619/web-app-foundation/blob/__TEMPLATE_SHA__/docs/ui.md)を適用します。
-- 利用方法は [README.md](README.md)、変更理由と受け入れ条件はIssue／PR、検証証拠はPRとGitHub Actionsに記録します。永続的な検証履歴Markdownを追加しません。
-- npm ci、check、typecheck、test、buildを実行します。ブラウザの主要操作はアプリ固有のテストで確認します。
-- main保護はユーザー方針で選択します。特権Kitを導入する場合は、その安全条件を別途満たします。
+- npm ci、check、typecheck、test、build、Chromium E2Eを実行する。アプリ固有の主要操作をテストする。
+- Simpleを既定とし、main保護はユーザー方針で選ぶ。特権Kitを導入する場合は、その安全条件を別途満たす。
+- 版はpackage.jsonを正本とし、通常のマージから版付きReleaseの完了を推測しない。

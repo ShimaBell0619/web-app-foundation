@@ -6,17 +6,33 @@ import { execFileSync } from 'node:child_process';
 const foundation = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(join(foundation, path), 'utf8');
 
+function adoptedRules(templateSha) {
+  const source = read('AGENTS.md');
+  const start = '<!-- foundation:shared-rules:start -->';
+  const end = '<!-- foundation:shared-rules:end -->';
+  if (source.split(start).length !== 2 || source.split(end).length !== 2 || source.indexOf(start) > source.indexOf(end)) throw new Error('共通規則の範囲が不正です。');
+  const url = `https://github.com/ShimaBell0619/web-app-foundation/blob/${templateSha}/`;
+  const common = source.split(start)[1].split(end)[0].trim()
+    .replace(/`((?:docs|kits)\/[^`*]+\.md)`/g, (_, path) => `[${path}](${url}${path})`)
+    .replace(/`\.github\/workflows\/web-ci\.yml`/g, `[共通Web CI](${url}.github/workflows/web-ci.yml)`);
+  return `# 採用先の開発規則\n\n本書がこのアプリで適用する規則です。共通規則は[Foundationの採用元](${url}AGENTS.md)から生成しました。通常作業で外部AGENTSの取得は必須ではありません。更新時は採用元の差分をレビューし、アプリ固有規則を保持します。\n\n${common}\n\n${read('kits/web/AGENTS.md')}`;
+}
+
 export function createApp(target, { name, foundationSha }) {
   if (!/^[a-z][a-z0-9-]{0,63}$/.test(name || '')) throw new Error('名前は小文字英字から始まる64文字以内の英数字・ハイフンにしてください。');
+  const templateSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: foundation, encoding: 'utf8' }).trim();
+  foundationSha ??= templateSha;
   if (!/^[a-f0-9]{40}$/.test(foundationSha || '')) throw new Error('レビュー済みの40桁コミットSHAを指定してください。');
   const output = resolve(target);
   if (output === foundation || output.startsWith(foundation + sep)) throw new Error('Foundationの外に出力してください。');
   if (existsSync(output) && readdirSync(output).length) throw new Error('出力先は空ディレクトリにしてください。');
   const pkg = JSON.parse(read('kits/web/starter/package.json'));
   if (pkg.engines.node !== JSON.parse(read('package.json')).engines.node) throw new Error('starterとFoundationのNode engineが一致しません。');
-  const templateSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: foundation, encoding: 'utf8' }).trim();
-  const state = execFileSync('git', ['status', '--porcelain'], { cwd: foundation, encoding: 'utf8' }).trim() ? '作業ツリーに未コミット変更あり（正式採用前に再生成）' : 'commitと一致';
-  const replacements = { __APP_NAME__: name, __FOUNDATION_SHA__: foundationSha, __TEMPLATE_SHA__: templateSha, __TEMPLATE_STATE__: state };
+  if (execFileSync('git', ['status', '--porcelain'], { cwd: foundation, encoding: 'utf8' }).trim()) throw new Error('未コミット変更があるため生成できません。レビュー済みのclean checkoutから生成してください。');
+  try { execFileSync('git', ['cat-file', '-e', `${foundationSha}:.github/workflows/web-ci.yml`], { cwd: foundation, stdio: 'ignore' }); }
+  catch { throw new Error('指定SHAの共通Web CIを取得できません。レビュー済みcommitをfetchしてから生成してください。'); }
+  const rules = adoptedRules(templateSha);
+  const replacements = { __APP_NAME__: name, __FOUNDATION_SHA__: foundationSha, __TEMPLATE_SHA__: templateSha };
   mkdirSync(dirname(output), { recursive: true });
   const staging = mkdtempSync(join(dirname(output), '.foundation-create-'));
   try {
@@ -24,8 +40,10 @@ export function createApp(target, { name, foundationSha }) {
       recursive: true,
       filter: path => !['node_modules', 'dist', 'test-results', 'playwright-report'].includes(basename(path)),
     });
-    for (const name of ['PRODUCT.md', 'DESIGN.md', 'AGENTS.md']) writeFileSync(join(staging, name), read('kits/web/' + name));
+    for (const name of ['PRODUCT.md', 'DESIGN.md']) writeFileSync(join(staging, name), read('kits/web/' + name));
+    writeFileSync(join(staging, 'AGENTS.md'), rules);
     mkdirSync(join(staging, '.github/workflows'), { recursive: true });
+    writeFileSync(join(staging, '.github/pull_request_template.md'), read('.github/pull_request_template.md'));
     writeFileSync(join(staging, '.github/workflows/ci.yml'), read('kits/web/ci.yml'));
     writeFileSync(join(staging, '.node-version'), read('.node-version'));
     cpSync(join(foundation, 'kits/vercel/simple.json'), join(staging, 'vercel.json'));
@@ -48,12 +66,13 @@ export function createApp(target, { name, foundationSha }) {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     const [target, ...args] = process.argv.slice(2);
-    if (!target || args.length !== 4) throw new Error('使い方: node scripts/create-app.mjs <出力先> --name <名前> --foundation-sha <40桁SHA>');
+    if (!target || ![2, 4].includes(args.length)) throw new Error('使い方: node scripts/create-app.mjs <出力先> --name <名前> [--foundation-sha <40桁SHA>]');
     const options = {};
     for (let i = 0; i < args.length; i += 2) {
       if (!['--name', '--foundation-sha'].includes(args[i]) || options[args[i]]) throw new Error('不明または重複するオプションです。');
       options[args[i]] = args[i + 1];
     }
+    if (!options['--name']) throw new Error('--nameを指定してください。');
     console.log(createApp(target, { name: options['--name'], foundationSha: options['--foundation-sha'] }));
     console.log('生成完了。次にnpm ciと品質ゲートを実行してください。');
   } catch (error) { console.error(error.message); process.exitCode = 1; }
