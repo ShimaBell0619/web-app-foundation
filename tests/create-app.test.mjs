@@ -25,9 +25,11 @@ test('生成は文書・caller・実lockfileを揃え、依存graphを変更し�
     assert.match(design, /^name: fresh-app$/m);
     assert.match(design, /^## Overview$/m);
     assert.doesNotMatch(design, /__APP_NAME__|__TEMPLATE_SHA__/);
-    assert.match(readFileSync(join(app, 'VERIFICATION.md'), 'utf8'), /未実施/);
+    assert.match(readFileSync(join(app, 'PRODUCT.md'), 'utf8'), /^# fresh-app — 製品の約束$/m);
+    assert.match(readFileSync(join(app, 'PRODUCT.md'), 'utf8'), /^## 守るべき保証$/m);
+    assert.ok(!existsSync(join(app, 'VERIFICATION.md')));
     assert.deepEqual(json(join(app, 'vercel.json')).git.deploymentEnabled, { '**': false, main: true });
-    assert.deepEqual(validateLinks(app, ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md', 'VERIFICATION.md']), []);
+    assert.deepEqual(validateLinks(app, ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md']), []);
     assert.ok(!existsSync(join(app, 'node_modules')));
     writeFileSync(join(app, 'keep.txt'), '保持');
     assert.throws(() => createApp(app, { name: 'fresh-app', foundationSha: sha }), /空ディレクトリ/);

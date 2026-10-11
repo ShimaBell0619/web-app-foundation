@@ -1,6 +1,6 @@
 # __APP_NAME__
 
-日本語のReact／TypeScript／Viteスターターです。製品固有の仕様を [PRODUCT.md](PRODUCT.md) と [DESIGN.md](DESIGN.md) へ記入し、最初の機能PRで代表テストを更新してください。
+日本語のReact／TypeScript／Viteスターターです。製品の目的・重要な保証・境界を [PRODUCT.md](PRODUCT.md)、視覚デザインを [DESIGN.md](DESIGN.md) に記入してください。機能の細部はコードと代表テストで管理します。
 
 ## 開発と検証
 
@@ -16,7 +16,7 @@ npm run test:e2e
 npm run dev
 ```
 
-結果は [VERIFICATION.md](VERIFICATION.md) に記録します。開発規則は [AGENTS.md](AGENTS.md) を読みます。初期画面の検証は、後から作る製品の受け入れ検証とは別です。
+結果はGitHubのIssue・PR・Actionsへ記録します。開発規則は [AGENTS.md](AGENTS.md) を読みます。初期画面の検証は、後から作る製品の受け入れ検証とは別です。
 
 この小さなスターターはsemantic HTMLとCSSを使います。通常のReact製品で部品が必要になったら、採用元のUI方針に沿って成熟したアクセシブルな部品を選びます。
 

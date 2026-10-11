@@ -16,7 +16,7 @@ test('Foundation外の空ディレクトリで生成・clean install・実品質
     const ci = parseYaml(readFileSync(join(app, '.github/workflows/ci.yml'), 'utf8'));
     assert.match(ci.jobs.verify.uses, /web-ci\.yml@[a-f0-9]{40}$/);
     assert.equal(ci.permissions.contents, 'read');
-    assert.deepEqual(validateLinks(app, ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md', 'VERIFICATION.md']), []);
+    assert.deepEqual(validateLinks(app, ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md']), []);
     for (const args of [['ci'], ...['check', 'typecheck', 'test', 'build'].map(script => ['run', script])]) {
       const result = spawnSync('npm', args, { cwd: app, encoding: 'utf8', timeout: 180000, env: { ...process.env, CI: 'true' } });
       assert.equal(result.status, 0, `npm ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
