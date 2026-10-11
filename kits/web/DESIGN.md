@@ -25,7 +25,7 @@ UI実装前に、主な利用者・作業・最初に見せる情報に基づく
 
 front matterには、**実際に採用する値だけ**を公式キー（`colors`、`typography`、`spacing`、`rounded`、`components`）で定義します。値を追加したら該当項目を `omitted` から除外してください。トークンは正確な値、本文章は採用理由と使い方を担います。
 
-本書に機能・データ・例外処理の契約は書きません（`PRODUCT.md` が正本）。共通のUI設計原則、不要な文言・装飾の抑制、アクセシビリティ、実画面検証手順は [FoundationのUIガイド](https://github.com/ShimaBell0619/web-app-foundation/blob/main/docs/ui.md) に従います。
+本書に機能・データ・例外処理の契約は書きません（`PRODUCT.md` が正本）。共通のUI設計原則、不要な文言・装飾の抑制、アクセシビリティ、実画面検証手順は [FoundationのUIガイド](https://github.com/ShimaBell0619/web-app-foundation/blob/__TEMPLATE_SHA__/docs/ui.md) に従います。
 
 ## Colors
 
