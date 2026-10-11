@@ -24,12 +24,12 @@ export function createApp(target, { name, foundationSha }) {
       recursive: true,
       filter: path => !['node_modules', 'dist', 'test-results', 'playwright-report'].includes(basename(path)),
     });
-    for (const name of ['PRODUCT.md', 'DESIGN.md', 'AGENTS.md', 'VERIFICATION.md']) writeFileSync(join(staging, name), read('kits/web/' + name));
+    for (const name of ['PRODUCT.md', 'DESIGN.md', 'AGENTS.md']) writeFileSync(join(staging, name), read('kits/web/' + name));
     mkdirSync(join(staging, '.github/workflows'), { recursive: true });
     writeFileSync(join(staging, '.github/workflows/ci.yml'), read('kits/web/ci.yml'));
     writeFileSync(join(staging, '.node-version'), read('.node-version'));
     cpSync(join(foundation, 'kits/vercel/simple.json'), join(staging, 'vercel.json'));
-    for (const path of ['README.md', 'AGENTS.md', 'DESIGN.md', 'VERIFICATION.md', '.github/workflows/ci.yml']) {
+    for (const path of ['README.md', 'AGENTS.md', 'PRODUCT.md', 'DESIGN.md', '.github/workflows/ci.yml']) {
       let text = readFileSync(join(staging, path), 'utf8');
       for (const [key, value] of Object.entries(replacements)) text = text.replaceAll(key, value);
       writeFileSync(join(staging, path), text);
