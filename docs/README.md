@@ -6,7 +6,7 @@
 | --- | --- |
 | [`docs/adoption.md`](adoption.md) | アプリ導入と更新 |
 | [`docs/operations.md`](operations.md) | Chatからツール・GitHub・配備・検証を進める |
-| [`docs/ui.md`](ui.md) | UI実装、実ブラウザ、キーボード・レスポンシブ |
+| [`docs/ui.md`](ui.md) | UIの初期設計、文言・装飾の採用判断、実ブラウザ検証 |
 | [`docs/azure.md`](azure.md) | Azure OIDC、FIC、RBACとリソース操作 |
 | [`docs/maintaining.md`](maintaining.md) | Foundation自身のCI、Changesets、Release |
 
