@@ -7,7 +7,7 @@
 node scripts/create-app.mjs /path/to/new-app --name new-app --foundation-sha <レビュー済み40桁SHA>
 ```
 
-3. 生成されたPRODUCT.md／DESIGN.mdを製品固有の契約へ置き換えます。AGENTS.mdの固定SHAの共通規則を取得して適用します。
+3. 生成されたPRODUCT.mdを機能・動作の契約に、DESIGN.mdをGoogle公式形式の**視覚デザインシステム**に置き換えます。生成時のDESIGN.mdは名前のみ展開された未完成テンプレートです。採用したデザイントークンと視覚的な理由を記載し、対応するomitted項目を削除します。AGENTS.mdの固定SHAの共通規則を取得して適用します。
 4. .node-versionのNodeでnpm ci、check、typecheck、test、buildを実行します。生成は外部リソース作成やnpm installを行いません。依存を変えたときだけlockfileを再生成します。
 5. アプリを短命branchへ一括コミットし、PRでCIを確認します。callerのSHAが実際にレビュー済みか確認します。40桁の書式検査だけではレビューを証明しません。
 6. 必要なら [Vercel](../kits/vercel/README.md) のSimple方式でmainを接続します。main保護はユーザー方針で選択し、GitHub CI成功後のProduction公開は保証しません。特権Kitの保護条件は維持します。
