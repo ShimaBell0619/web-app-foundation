@@ -21,6 +21,10 @@
 - [ ] E2Eなど追加で必要な検証
 - 実施したコマンド・CI URL・確認対象SHA:
 - 未実施の検証と理由:
+- 最終PR HEAD・CI run / attempt・実際のcheckout SHA:
+- マージ後のmain SHA・必須CI結果（未マージなら不要）:
+- 公開を伴う場合のみ: source SHA・Deployment ID・READY・alias照合・実画面結果:
+- 中断時のみ: 現在HEAD・確認済み・未解決・次の一手:
 
 ## 自己レビュー
 

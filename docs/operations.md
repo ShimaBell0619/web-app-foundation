@@ -30,6 +30,8 @@ Gitが利用できれば、差分を確認し、対象ファイルをstageして
 
 runのhead_shaと、PRのmerge refをcheckoutしたgithub.shaは異なり得ます。双方を記録し、Artifactの対象SHAを確認します。HEADが進んだら旧runを最終証拠にしません。CI失敗は原因を修正し、最終差分で再実行します。
 
+マージ後はmainの正確なSHAの必須CIを確認します。公開を伴う場合はDeploymentのsource SHAも照合し、PR成功・main CI・READY・公開画面の結果を分けて報告します。中断時はPRに現在HEAD、確認済み、未解決、次の一手を残し、再開時にGitHubとプロバイダーの実状態を取り直します。
+
 ## Publicリポジトリの作成
 
 現在の [管理Kit](../kits/github/repository-create/README.md) はPrivate専用です。Public化のために制約を緩めません。既存接続がPublic作成を提供しなければ、ユーザーがGitHubで一度作成する経路を使い、以降の生成・一括commit・CIをChatから実行します。作成自動化は必要性と権限影響を評価する別件です。

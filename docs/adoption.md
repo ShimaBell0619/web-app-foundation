@@ -4,26 +4,26 @@
 2. Foundationの外に空ディレクトリを用意し、生成します。
 
 ```bash
-node scripts/create-app.mjs /path/to/new-app --name new-app --foundation-sha <レビュー済み40桁SHA>
+node scripts/create-app.mjs /path/to/new-app --name new-app
 ```
 
-3. 生成されたPRODUCT.mdを**製品目的・重要な保証・制約の短い契約**に、DESIGN.mdをGoogle公式形式の**視覚デザインシステム**に置き換えます。生成時のDESIGN.mdは名前のみ展開された未完成テンプレートです。採用したデザイントークンと視覚的な理由を記載し、対応するomitted項目を削除します。AGENTS.mdの固定SHAの共通規則を取得して適用します。
+3. 生成されたPRODUCT.mdを**製品目的・重要な保証・制約の短い契約**に、DESIGN.mdをGoogle公式形式の**視覚デザインシステム**に置き換えます。生成時のDESIGN.mdは名前のみ展開された未完成テンプレートです。採用したデザイントークンと視覚的な理由を記載し、対応するomitted項目を削除します。AGENTS.mdには採用元の共通規則とアプリ固有規則が含まれ、外部AGENTSの取得は通常作業の必須工程ではありません。
 4. .node-versionのNodeでnpm ci、check、typecheck、test、buildを実行します。生成は外部リソース作成やnpm installを行いません。依存を変えたときだけlockfileを再生成します。
 5. アプリを短命branchへ一括コミットし、PRでCIを確認します。callerのSHAが実際にレビュー済みか確認します。40桁の書式検査だけではレビューを証明しません。
 6. 必要なら [Vercel](../kits/vercel/README.md) のSimple方式でmainを接続します。main保護はユーザー方針で選択し、GitHub CI成功後のProduction公開は保証しません。特権Kitの保護条件は維持します。
 7. 最初の機能PRからアプリ固有の操作・実画面を検証し、採用元SHA・CI参照SHA・最終SHA・run ID・配備・ブラウザの証拠を、該当する**Issue／PRとGitHub Actions**に記録します。常設のVERIFICATION.mdは生成しません。長期保管が必要な成果物はRelease等へ別途保存します。
 
-公式CLIによる検証コマンド（Google 0.4.0へ固定、ランタイム依存なし）：
+公式CLIによる検証コマンド（Google 0.4.0と推移依存をlockfileで固定、ランタイム依存なし）：
 
 ```bash
-npx --yes --package=@google/design.md@0.4.0 designmd lint DESIGN.md
+npm run design:lint
 ```
 
 設計値とCSSが一致するかは、CLIの構造検証に加えて実装差分・実画面で確認します。CLIはMarkdownのtoken参照、構造、contrast等を検査しますが、CSSとの自動一致や製品UIの良否までは保証しません。公式CLIは警告でも終了コード0のため、出力をレビューして採否を判断します。生成CIにはlintジョブが含まれます。
 
-配布物の正本は [Web Kit](../kits/web/README.md) です。生成先にはlockfile、日本語文書、Node指定、Simple設定、SHA固定callerが揃います。生成APIはテンプレート取得時のHEADを返します。未コミットのFoundationから生成した場合は生成結果にその状態が表示されるため、正式採用前にclean checkoutから再生成してください。
+配布物の正本は [Web Kit](../kits/web/README.md) です。生成先にはlockfile、日本語文書、Node指定、Simple設定、SHA固定callerが揃います。生成器は未コミット・未追跡の変更があれば出力前に拒否します。生成APIはテンプレート元HEADとCI参照SHAを返し、CIは既定で同じSHAです。CIだけ別のレビュー済みcommitを使う場合は`--foundation-sha <40桁SHA>`を明示し、そのcommitをfetchして差分・採用理由をPRに記録します。ローカルでWorkflowの存在も確認しますが、書式・存在の検査だけでレビューやGitHub上のcaller解決を証明しません。
 
-必要な機能だけ [Release](../kits/github/release/README.md)、[Azure](azure.md)、Controlledから選択導入します。採用先を更新するときは、コピーしたテンプレートSHAとCI参照SHAを別々に点検し、アプリ固有差分を維持します。旧パス・権限・認証設定を暗黙に引き継ぎません。
+必要な機能だけ [Release](../kits/github/release/README.md)、[Azure](azure.md)、Controlledから選択導入します。採用先を更新するときは、新しい空ディレクトリへ生成して共通規則・設定の差分をレビューし、アプリ固有節と実装を保持して取り込みます。既存アプリ全体への上書き生成はしません。コピーしたテンプレートSHAとCI参照SHAを点検し、旧パス・権限・認証設定を暗黙に引き継ぎません。
 
 ## ゼロからの受け入れ実証
 

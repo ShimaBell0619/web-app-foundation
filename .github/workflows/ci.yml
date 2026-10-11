@@ -32,8 +32,8 @@ jobs:
       - name: Validate Foundation contracts
         run: npm run foundation:validate
 
-      - name: Validate Google DESIGN.md template
-        run: npx --yes --package=@google/design.md@0.4.0 designmd lint kits/web/DESIGN.md
+      - name: Validate Google DESIGN.md template with locked CLI
+        run: npm run design:lint
 
       - name: Run validator regression tests
         run: npm run foundation:test
